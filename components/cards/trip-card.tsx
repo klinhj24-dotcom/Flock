@@ -1,7 +1,7 @@
 "use client";
 
-import { Users, Split, Plus, ArrowUpRight } from "lucide-react";
-import type { Trip } from "@/lib/mock-data";
+import { Users, Split, Plus, ArrowUpRight, Zap } from "lucide-react";
+import type { Trip, BookingItem } from "@/lib/mock-data";
 import { formatCurrency, formatDateRange, initials } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 
@@ -26,13 +26,66 @@ const STATUS_STYLES: Record<
   },
 };
 
+const BOOKING_DOT: Record<BookingItem["status"], string> = {
+  booked: "bg-[#6BCB77]",
+  book_now: "bg-primary pulse-amber",
+  book_soon: "bg-text-muted/60",
+  pending: "bg-transparent border border-border",
+};
+
+const BOOKING_LABEL: Record<BookingItem["status"], string> = {
+  booked: "booked",
+  book_now: "book now",
+  book_soon: "book soon",
+  pending: "pending",
+};
+
+function BookingChip({ item }: { item: BookingItem }) {
+  return (
+    <div className="flex-1 rounded-lg border border-border bg-background/40 px-2.5 py-1.5">
+      <div className="flex items-center gap-1.5">
+        <span
+          className={cn(
+            "h-1.5 w-1.5 flex-shrink-0 rounded-full",
+            BOOKING_DOT[item.status]
+          )}
+        />
+        <span className="text-[11px] text-text-primary">
+          {item.item}{" "}
+          <span className="text-text-muted">{BOOKING_LABEL[item.status]}</span>
+        </span>
+      </div>
+      {item.note && (
+        <div className="ml-3 mt-0.5 text-[10px] leading-tight text-text-muted">
+          {item.note}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function TripCard({ trip }: { trip: Trip }) {
   const status = STATUS_STYLES[trip.status];
   const showingCost = trip.actualCost ?? trip.estimatedCost;
   const costLabel = trip.actualCost ? "actual" : "est.";
+  const urgent = trip.bookingStatus.find(
+    (b) => b.status === "book_now" && b.item === "Flights"
+  );
+  const isCaptain = trip.captain === "Henry";
 
   return (
     <div className="card card-hover overflow-hidden">
+      {/* Urgent banner */}
+      {urgent && (
+        <div className="flex items-center gap-1.5 border-l-2 border-primary bg-primary/8 px-4 py-2 text-[11px] text-primary">
+          <Zap className="h-3 w-3 flex-shrink-0" strokeWidth={2.25} />
+          <span>
+            Book flights now
+            {urgent.note ? ` — ${urgent.note.toLowerCase()}` : ""}
+          </span>
+        </div>
+      )}
+
       {/* Hero */}
       <div
         className={cn(
@@ -68,7 +121,7 @@ export function TripCard({ trip }: { trip: Trip }) {
         </div>
 
         {/* Avatar stack */}
-        <div className="mb-5 flex items-center">
+        <div className="mb-2 flex items-center">
           <div className="flex -space-x-2">
             {trip.people.slice(0, 5).map((p, i) => (
               <div
@@ -87,8 +140,18 @@ export function TripCard({ trip }: { trip: Trip }) {
           </div>
         </div>
 
+        {/* Captain line */}
+        <div
+          className={cn(
+            "mb-5 text-[12px]",
+            isCaptain ? "text-primary" : "text-text-muted"
+          )}
+        >
+          {isCaptain ? "You're running this" : `${trip.captain} is running this`}
+        </div>
+
         {/* Cost */}
-        <div className="mb-5 flex items-baseline justify-between border-t border-border pt-4">
+        <div className="mb-4 flex items-baseline justify-between border-t border-border pt-4">
           <div>
             <div className="text-[11px] uppercase tracking-[0.1em] text-text-muted">
               Budget ({costLabel})
@@ -106,6 +169,13 @@ export function TripCard({ trip }: { trip: Trip }) {
           >
             {trip.status}
           </div>
+        </div>
+
+        {/* Booking status chips */}
+        <div className="mb-5 flex items-stretch gap-2">
+          {trip.bookingStatus.map((b) => (
+            <BookingChip key={b.item} item={b} />
+          ))}
         </div>
 
         {/* Actions */}

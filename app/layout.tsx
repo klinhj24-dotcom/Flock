@@ -15,7 +15,7 @@ const playfair = Playfair_Display({
 });
 
 export const metadata: Metadata = {
-  title: "Away — your semester abroad, organized",
+  title: "Flock — your semester abroad, organized",
   description:
     "Plan trips, track budgets, and discover destinations during your semester abroad.",
 };

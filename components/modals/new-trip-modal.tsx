@@ -17,6 +17,7 @@ export function NewTripModal({
   const [budget, setBudget] = useState("");
   const [people, setPeople] = useState<string[]>(["Henry"]);
   const [personInput, setPersonInput] = useState("");
+  const [captain, setCaptain] = useState("Henry");
 
   if (!open) return null;
 
@@ -31,6 +32,7 @@ export function NewTripModal({
   const removePerson = (name: string) => {
     if (name === "Henry") return;
     setPeople(people.filter((p) => p !== name));
+    if (captain === name) setCaptain("Henry");
   };
 
   const handleCreate = () => {
@@ -41,6 +43,7 @@ export function NewTripModal({
     setEndDate("");
     setBudget("");
     setPeople(["Henry"]);
+    setCaptain("Henry");
   };
 
   return (
@@ -182,6 +185,24 @@ export function NewTripModal({
                 className="w-full rounded-lg border border-border bg-background px-3 py-2.5 pl-7 text-[14px] text-text-primary placeholder:text-text-muted focus:border-primary/40 focus:outline-none"
               />
             </div>
+          </div>
+
+          {/* Trip Captain */}
+          <div>
+            <label className="mb-1.5 block text-[11px] uppercase tracking-[0.1em] text-text-muted">
+              Trip Captain
+            </label>
+            <select
+              value={captain}
+              onChange={(e) => setCaptain(e.target.value)}
+              className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-[14px] text-text-primary focus:border-primary/40 focus:outline-none"
+            >
+              {people.map((p) => (
+                <option key={p} value={p}>
+                  {p}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
 

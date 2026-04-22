@@ -1,5 +1,17 @@
 export type TripStatus = "Planning" | "Confirmed" | "Completed";
 
+export type BookingItemStatus =
+  | "booked"
+  | "book_now"
+  | "book_soon"
+  | "pending";
+
+export type BookingItem = {
+  item: string;
+  status: BookingItemStatus;
+  note?: string;
+};
+
 export type Trip = {
   id: string;
   city: string;
@@ -12,6 +24,8 @@ export type Trip = {
   actualCost?: number;
   status: TripStatus;
   accent: string; // tailwind gradient classes
+  captain: string;
+  bookingStatus: BookingItem[];
 };
 
 export type Destination = {
@@ -66,6 +80,11 @@ export const TRIPS: Trip[] = [
     estimatedCost: 320,
     status: "Confirmed",
     accent: "from-[#6B4423] via-[#8B5A2B] to-[#E8D5A3]",
+    captain: "Henry",
+    bookingStatus: [
+      { item: "Flights", status: "booked", note: "¥12,400 RT" },
+      { item: "Accommodation", status: "booked", note: "Hostel confirmed" },
+    ],
   },
   {
     id: "t2",
@@ -78,6 +97,11 @@ export const TRIPS: Trip[] = [
     estimatedCost: 280,
     status: "Planning",
     accent: "from-[#7A2E2E] via-[#B85C3C] to-[#E8B572]",
+    captain: "Jake",
+    bookingStatus: [
+      { item: "Flights", status: "book_now", note: "Prices up 18% this week" },
+      { item: "Accommodation", status: "book_soon" },
+    ],
   },
   {
     id: "t3",
@@ -90,6 +114,11 @@ export const TRIPS: Trip[] = [
     estimatedCost: 450,
     status: "Planning",
     accent: "from-[#1F5F5B] via-[#4A9EBF] to-[#9FD4C5]",
+    captain: "TBD",
+    bookingStatus: [
+      { item: "Flights", status: "book_soon" },
+      { item: "Accommodation", status: "book_now", note: "Dec fills fast" },
+    ],
   },
   {
     id: "t4",
@@ -103,6 +132,11 @@ export const TRIPS: Trip[] = [
     actualCost: 310,
     status: "Completed",
     accent: "from-[#2E3A5F] via-[#5B6EA8] to-[#A9B5D9]",
+    captain: "Marcus",
+    bookingStatus: [
+      { item: "Flights", status: "booked" },
+      { item: "Accommodation", status: "booked" },
+    ],
   },
 ];
 
@@ -202,6 +236,42 @@ export const DESTINATIONS: Destination[] = [
     bestMonths: "Nov – Feb",
     vibes: ["Nature"],
     accent: "from-[#2F4A2B] via-[#5E7D4C] to-[#B5C99A]",
+  },
+  {
+    id: "d9",
+    city: "Lisbon",
+    country: "Portugal",
+    flag: "🇵🇹",
+    flightTime: "2h 30m",
+    flightHours: 2.5,
+    weekendCost: 240,
+    bestMonths: "Sep – Nov",
+    vibes: ["Culture"],
+    accent: "from-[#2E4B6B] via-[#6EA8B8] to-[#F2D4A7]",
+  },
+  {
+    id: "d10",
+    city: "Prague",
+    country: "Czech Republic",
+    flag: "🇨🇿",
+    flightTime: "varies",
+    flightHours: 3,
+    weekendCost: 210,
+    bestMonths: "Oct – Nov",
+    vibes: ["City", "Culture"],
+    accent: "from-[#3F2F4A] via-[#7A5E8A] to-[#D4B5C9]",
+  },
+  {
+    id: "d11",
+    city: "Budapest",
+    country: "Hungary",
+    flag: "🇭🇺",
+    flightTime: "varies",
+    flightHours: 3,
+    weekendCost: 190,
+    bestMonths: "Sep – Nov",
+    vibes: ["Party", "Culture"],
+    accent: "from-[#5A3A2E] via-[#A86B4F] to-[#E8C99A]",
   },
 ];
 

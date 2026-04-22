@@ -97,11 +97,21 @@ export function BudgetSnapshot() {
           <span className="text-text-muted">({overallPct}%)</span>
         </span>
       </div>
-      <div className="mb-7 h-2 w-full overflow-hidden rounded-full bg-border">
+      <div className="mb-2 h-2 w-full overflow-hidden rounded-full bg-border">
         <div
           className="h-full rounded-full bg-gradient-to-r from-primary to-primary-dim"
           style={{ width: `${overallPct}%` }}
         />
+      </div>
+
+      {/* Pace signal */}
+      <div className="mb-6 text-[12px] text-primary">
+        You're spending{" "}
+        <span className="font-medium">$134/day</span>{" "}
+        <span className="text-text-muted">·</span> budget is{" "}
+        <span className="font-medium">$116/day</span>{" "}
+        <span className="text-text-muted">·</span>{" "}
+        <span>slightly over pace</span>
       </div>
 
       {/* Sub-bars */}

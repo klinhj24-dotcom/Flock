@@ -78,3 +78,16 @@ input[type="number"] {
     0 0 0 1px rgba(232, 213, 163, 0.08);
   border-color: #2a2a40;
 }
+
+@keyframes pulse-amber {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(232, 213, 163, 0.6);
+  }
+  50% {
+    box-shadow: 0 0 0 4px rgba(232, 213, 163, 0);
+  }
+}
+.pulse-amber {
+  animation: pulse-amber 1.6s ease-in-out infinite;
+}

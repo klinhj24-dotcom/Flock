@@ -32,7 +32,7 @@ export function Sidebar() {
           <Compass className="h-4.5 w-4.5 text-primary" strokeWidth={1.75} />
         </div>
         <span className="font-display text-2xl tracking-tight text-text-primary">
-          Away
+          Flock
         </span>
       </div>
 
