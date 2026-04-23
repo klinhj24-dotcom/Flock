@@ -17,6 +17,13 @@ import {
 } from "@/lib/utils";
 
 export default function HomePage() {
+  const today = new Date();
+  const onTripNow = TRIPS.filter((t) => {
+    if (t.status === "Completed") return false;
+    const start = new Date(t.startDate);
+    const end = new Date(t.endDate);
+    return today >= start && today <= end;
+  });
   const upcoming = TRIPS.filter((t) => t.status !== "Completed").slice(0, 3);
   const ideas = DESTINATIONS.slice(0, 3);
 
@@ -129,6 +136,72 @@ export default function HomePage() {
             </div>
           </div>
 
+          {/* On this trip now - full width */}
+          <div className="card card-hover p-5 sm:p-7 lg:col-span-3">
+            <div className="mb-5 flex items-center justify-between">
+              <div>
+                <div className="text-[12px] uppercase tracking-[0.12em] text-text-muted">
+                  Live
+                </div>
+                <h2 className="mt-1 font-display text-[24px] leading-none text-text-primary">
+                  On this trip now
+                </h2>
+              </div>
+              {onTripNow.length > 0 && (
+                <Link
+                  href="/trips"
+                  className="flex items-center gap-1 text-[12px] text-text-muted transition hover:text-text-primary"
+                >
+                  Trip details <ArrowRight className="h-3 w-3" />
+                </Link>
+              )}
+            </div>
+
+            {onTripNow.length === 0 ? (
+              <div className="flex flex-col items-start justify-between gap-2 rounded-xl border border-dashed border-border bg-background/40 px-5 py-4 text-[13px] text-text-muted sm:flex-row sm:items-center">
+                <span>No one's on a trip right now. Next one kicks off soon.</span>
+                <Link
+                  href="/trips"
+                  className="text-[12px] text-text-primary underline-offset-2 hover:underline"
+                >
+                  See upcoming
+                </Link>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                {onTripNow.map((trip) => (
+                  <div
+                    key={trip.id}
+                    className="group flex items-center gap-4 rounded-xl border border-primary/30 bg-primary/5 px-4 py-3.5"
+                  >
+                    <div
+                      className={cn(
+                        "gradient-noise h-12 w-12 flex-shrink-0 rounded-lg bg-gradient-to-br",
+                        trip.accent
+                      )}
+                    />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[14px] font-medium text-text-primary">
+                          {trip.city}
+                        </span>
+                        <span className="text-[12px] text-text-muted">
+                          {trip.flag} {trip.country}
+                        </span>
+                      </div>
+                      <div className="mt-0.5 text-[12px] text-text-muted">
+                        {formatDateRange(trip.startDate, trip.endDate)} · with {trip.people.length}
+                      </div>
+                    </div>
+                    <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.1em] text-primary">
+                      Live
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
           {/* Trip Ideas - 3 col */}
           <div className="card card-hover p-5 sm:p-7 lg:col-span-3">
             <div className="mb-5 flex items-center justify-between">
@@ -137,7 +210,7 @@ export default function HomePage() {
                   Discover
                 </div>
                 <h2 className="mt-1 font-display text-[24px] leading-none text-text-primary">
-                  Trip ideas for this weekend
+                  Where to next?
                 </h2>
               </div>
               <Link

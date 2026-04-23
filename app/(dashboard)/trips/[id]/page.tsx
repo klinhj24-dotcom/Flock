@@ -309,9 +309,12 @@ function ExpensesTab({ trip }: { trip: Trip }) {
     <div id="expenses" className="grid grid-cols-1 gap-5 lg:grid-cols-[1.2fr_1fr]">
       {/* Log expense form */}
       <div className="card p-5 sm:p-7">
-        <div className="mb-4 text-[12px] uppercase tracking-[0.12em] text-text-muted">
-          Log an expense
+        <div className="mb-1 text-[12px] uppercase tracking-[0.12em] text-text-muted">
+          Log a group expense
         </div>
+        <p className="mb-4 text-[12px] text-text-muted">
+          Only for when one person pays for the whole group. Your personal spending syncs automatically from your linked bank.
+        </p>
         <div className="space-y-3">
           <div>
             <label className="mb-1 block text-[11px] uppercase tracking-[0.1em] text-text-muted">

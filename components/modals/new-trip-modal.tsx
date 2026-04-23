@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import {
   X,
   Plus,
@@ -11,16 +11,11 @@ import {
   DollarSign,
   Sparkles,
   Check,
+  ExternalLink,
+  Info,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Trip } from "@/lib/mock-data";
-
-type FlightOption = {
-  airline: string;
-  price: number;
-  duration: string;
-  departure: string;
-};
 
 const PREFERENCE_OPTIONS = [
   "Beach",
@@ -34,85 +29,32 @@ const PREFERENCE_OPTIONS = [
 
 const ACCOMMODATION_OPTIONS = ["Hostel", "Airbnb", "Hotel"] as const;
 
-const MOCK_FLIGHTS: FlightOption[] = [
-  {
-    airline: "Peach Aviation",
-    price: 128,
-    duration: "2h 30m",
-    departure: "Fri 7:20 AM",
-  },
-  {
-    airline: "ANA",
-    price: 186,
-    duration: "2h 15m",
-    departure: "Fri 6:45 PM",
-  },
-  {
-    airline: "Jetstar",
-    price: 94,
-    duration: "2h 45m",
-    departure: "Sat 11:10 AM",
-  },
-];
-
 const TRIPS_BUDGET_REMAINING = 2160; // mock — pulled from budget
 
-type StepId = 1 | 2 | 3 | 4 | 5;
+type StepId = 1 | 2 | 3 | 4 | 5 | 6;
 
-function HeatmapDay({
-  label,
-  date,
-  price,
-  selected,
-  onClick,
-}: {
-  label: string;
-  date: number;
-  price: number;
-  selected: boolean;
-  onClick: () => void;
-}) {
-  let bg = "rgba(232, 92, 92, 0.2)"; // red >180
-  let fg = "#E85C5C";
-  if (price < 120) {
-    bg = "rgba(34, 197, 94, 0.2)";
-    fg = "#6BCB77";
-  } else if (price <= 180) {
-    bg = "rgba(232, 181, 114, 0.2)";
-    fg = "#E8B572";
-  }
-  return (
-    <button
-      onClick={onClick}
-      className={cn(
-        "flex flex-col items-start gap-0.5 rounded-lg p-2 text-left transition",
-        selected
-          ? "ring-2 ring-primary"
-          : "ring-1 ring-transparent hover:ring-border"
-      )}
-      style={{ background: bg }}
-    >
-      <div className="text-[10px] uppercase tracking-wide text-text-muted">
-        {label} {date}
-      </div>
-      <div className="text-[13px] font-medium" style={{ color: fg }}>
-        ${price}
-      </div>
-    </button>
-  );
-}
+const STEP_META: { id: StepId; label: string; optional: boolean }[] = [
+  { id: 1, label: "Destination", optional: false },
+  { id: 2, label: "Flights", optional: true },
+  { id: 3, label: "Budget", optional: true },
+  { id: 4, label: "Vibe", optional: true },
+  { id: 5, label: "Who", optional: false },
+  { id: 6, label: "Summary", optional: false },
+];
 
 function StepPill({
   n,
   label,
   active,
   done,
+  optional,
   onClick,
 }: {
   n: number;
   label: string;
   active: boolean;
   done: boolean;
+  optional: boolean;
   onClick: () => void;
 }) {
   return (
@@ -139,7 +81,10 @@ function StepPill({
       >
         {done ? <Check className="h-2.5 w-2.5" /> : n}
       </span>
-      <span className="hidden sm:inline">{label}</span>
+      <span className="hidden sm:inline">
+        {label}
+        {optional && <span className="ml-1 text-text-muted">·opt</span>}
+      </span>
     </button>
   );
 }
@@ -155,24 +100,34 @@ export function NewTripModal({
 }) {
   const [step, setStep] = useState<StepId>(1);
 
-  // Step 1
+  // Step 1 — destination + dates
   const [destination, setDestination] = useState("");
-  const [flights, setFlights] = useState<FlightOption[] | null>(null);
-  const [flightsLoading, setFlightsLoading] = useState(false);
-  const [selectedFlight, setSelectedFlight] = useState<FlightOption | null>(null);
-  const [selectedDayIdx, setSelectedDayIdx] = useState<number | null>(null);
+  const [datesMode, setDatesMode] = useState<"manual" | "flexible">("manual");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [flexibleNote, setFlexibleNote] = useState("");
 
-  // Step 2
+  // Step 2 — flights (booked externally, confirmed here)
+  const [flightOpened, setFlightOpened] = useState(false);
+  const [flightAirline, setFlightAirline] = useState("");
+  const [flightPrice, setFlightPrice] = useState("");
+  const [flightConfirmation, setFlightConfirmation] = useState("");
+  const [flightSkipped, setFlightSkipped] = useState(false);
+
+  // Step 3 — budget
   const [budget, setBudget] = useState("");
+  const [noBudget, setNoBudget] = useState(false);
+  const [budgetSkipped, setBudgetSkipped] = useState(false);
 
-  // Step 3
+  // Step 4 — preferences
   const [preferences, setPreferences] = useState<string[]>([]);
   const [accommodation, setAccommodation] = useState<
     (typeof ACCOMMODATION_OPTIONS)[number]
   >("Hostel");
   const [notes, setNotes] = useState("");
+  const [preferencesSkipped, setPreferencesSkipped] = useState(false);
 
-  // Step 4
+  // Step 5 — group
   const [people, setPeople] = useState<string[]>(["Henry"]);
   const [personInput, setPersonInput] = useState("");
   const [captain, setCaptain] = useState("Henry");
@@ -181,23 +136,11 @@ export function NewTripModal({
   const [waitlist, setWaitlist] = useState<string[]>([]);
   const [waitlistInput, setWaitlistInput] = useState("");
 
-  const heatmapDays = useMemo(() => {
-    const today = new Date();
-    return Array.from({ length: 14 }).map((_, i) => {
-      const d = new Date(today);
-      d.setDate(today.getDate() + i);
-      const dayLabel = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][
-        d.getDay()
-      ];
-      // Stable pseudo-random price per index
-      const price = 60 + ((i * 47 + 13) % 221);
-      return { label: dayLabel, date: d.getDate(), price, iso: d.toISOString().slice(0, 10) };
-    });
-  }, []);
-
   const budgetNum = Number(budget) || 0;
-  const overBudget = budgetNum > TRIPS_BUDGET_REMAINING;
+  const overBudget = !noBudget && budgetNum > TRIPS_BUDGET_REMAINING;
   const overBy = Math.max(0, budgetNum - TRIPS_BUDGET_REMAINING);
+
+  const currentStep = STEP_META.find((s) => s.id === step)!;
 
   const addPerson = () => {
     const name = personInput.trim();
@@ -224,27 +167,33 @@ export function NewTripModal({
     setWaitlist(waitlist.filter((p) => p !== name));
   };
 
-  const searchFlights = () => {
-    if (!destination.trim()) return;
-    setFlights(null);
-    setSelectedFlight(null);
-    setFlightsLoading(true);
-    setTimeout(() => {
-      setFlights(MOCK_FLIGHTS);
-      setFlightsLoading(false);
-    }, 500);
-  };
+  const flightSearchUrl = (() => {
+    const dest = encodeURIComponent(destination.trim() || "");
+    if (datesMode === "manual" && startDate && endDate) {
+      return `https://www.google.com/travel/flights?q=flights+to+${dest}+on+${startDate}+returning+${endDate}`;
+    }
+    return `https://www.google.com/travel/flights?q=flights+to+${dest}`;
+  })();
 
   const resetAll = () => {
     setStep(1);
     setDestination("");
-    setFlights(null);
-    setSelectedFlight(null);
-    setSelectedDayIdx(null);
+    setDatesMode("manual");
+    setStartDate("");
+    setEndDate("");
+    setFlexibleNote("");
+    setFlightOpened(false);
+    setFlightAirline("");
+    setFlightPrice("");
+    setFlightConfirmation("");
+    setFlightSkipped(false);
     setBudget("");
+    setNoBudget(false);
+    setBudgetSkipped(false);
     setPreferences([]);
     setAccommodation("Hostel");
     setNotes("");
+    setPreferencesSkipped(false);
     setPeople(["Henry"]);
     setPersonInput("");
     setCaptain("Henry");
@@ -258,44 +207,76 @@ export function NewTripModal({
     onClose();
   };
 
-  const next = () => {
-    if (step < 5) setStep(((step + 1) as StepId));
-  };
-  const back = () => {
-    if (step > 1) setStep(((step - 1) as StepId));
-  };
-
   const canContinue = () => {
-    if (step === 1) return destination.trim().length > 0;
-    if (step === 2) return budgetNum > 0;
-    if (step === 3) return true;
-    if (step === 4) return people.length >= 1;
+    if (step === 1) {
+      if (!destination.trim()) return false;
+      if (datesMode === "manual") return Boolean(startDate && endDate);
+      return flexibleNote.trim().length > 0;
+    }
+    if (step === 2) return true; // skippable
+    if (step === 3) return true; // skippable
+    if (step === 4) return true; // skippable
+    if (step === 5) return people.length >= 1;
     return true;
   };
 
+  const next = () => {
+    if (step < 6 && canContinue()) {
+      if (step === 2) setFlightSkipped(false);
+      if (step === 3) setBudgetSkipped(false);
+      if (step === 4) setPreferencesSkipped(false);
+      setStep((step + 1) as StepId);
+    }
+  };
+  const back = () => {
+    if (step > 1) setStep((step - 1) as StepId);
+  };
+  const skipCurrent = () => {
+    if (step === 2) {
+      setFlightSkipped(true);
+    }
+    if (step === 3) {
+      setBudgetSkipped(true);
+      setBudget("");
+      setNoBudget(false);
+    }
+    if (step === 4) setPreferencesSkipped(true);
+    if (step < 6) setStep((step + 1) as StepId);
+  };
+
   const handleCreate = () => {
-    const depart = selectedDayIdx !== null ? heatmapDays[selectedDayIdx].iso : heatmapDays[0].iso;
-    const end = new Date(depart);
-    end.setDate(end.getDate() + 2);
-    const endIso = end.toISOString().slice(0, 10);
+    const start =
+      datesMode === "manual" && startDate
+        ? startDate
+        : new Date().toISOString().slice(0, 10);
+    const endIso =
+      datesMode === "manual" && endDate
+        ? endDate
+        : (() => {
+            const d = new Date(start);
+            d.setDate(d.getDate() + 2);
+            return d.toISOString().slice(0, 10);
+          })();
+
+    const flightBooked = !flightSkipped && Boolean(flightAirline || flightConfirmation);
 
     const newTrip: Trip = {
       id: `t-${Date.now()}`,
       city: destination || "Somewhere",
       country: "TBD",
       flag: "🌍",
-      startDate: depart,
+      startDate: start,
       endDate: endIso,
       people,
-      estimatedCost: budgetNum || 0,
+      estimatedCost: noBudget || budgetSkipped ? 0 : budgetNum,
       status: "Planning",
       accent: "from-[#2E3A5F] via-[#5B6EA8] to-[#A9B5D9]",
       captain,
       tripCaptain: captain,
-      flightBooked: Boolean(selectedFlight),
+      flightBooked,
       waitlist: waitlist.length ? waitlist : undefined,
       bookingStatus: [
-        { item: "Flights", status: selectedFlight ? "booked" : "book_soon" },
+        { item: "Flights", status: flightBooked ? "booked" : "book_soon" },
         { item: "Accommodation", status: "book_soon" },
       ],
       expenses: [],
@@ -306,6 +287,15 @@ export function NewTripModal({
   };
 
   if (!open) return null;
+
+  const headings: Record<StepId, string> = {
+    1: "Where to?",
+    2: "Flights?",
+    3: "What's the damage?",
+    4: "What's the vibe?",
+    5: "Who's coming?",
+    6: "Ready to roll?",
+  };
 
   return (
     <div
@@ -320,14 +310,13 @@ export function NewTripModal({
         <div className="flex items-center justify-between border-b border-border px-5 py-4 sm:px-7 sm:py-5">
           <div>
             <div className="text-[11px] uppercase tracking-[0.12em] text-text-muted">
-              New trip · Step {step} of 5
+              New trip · Step {step} of 6
+              {currentStep.optional && (
+                <span className="ml-2 text-text-muted/80">· optional</span>
+              )}
             </div>
             <h2 className="mt-1 font-display text-[22px] leading-none text-text-primary sm:text-[24px]">
-              {step === 1 && "Where to?"}
-              {step === 2 && "What's the damage?"}
-              {step === 3 && "What's the vibe?"}
-              {step === 4 && "Who's coming?"}
-              {step === 5 && "Ready to roll?"}
+              {headings[step]}
             </h2>
           </div>
           <button
@@ -341,21 +330,17 @@ export function NewTripModal({
         {/* Step indicator */}
         <div className="border-b border-border bg-background/30 px-4 py-3 sm:px-7">
           <div className="flex items-center gap-1.5 sm:gap-2">
-            {(["Destination", "Budget", "Preferences", "Who", "Summary"] as const).map(
-              (label, idx) => {
-                const n = idx + 1;
-                return (
-                  <StepPill
-                    key={label}
-                    n={n}
-                    label={label}
-                    active={step === n}
-                    done={step > n}
-                    onClick={() => setStep(n as StepId)}
-                  />
-                );
-              }
-            )}
+            {STEP_META.map((meta) => (
+              <StepPill
+                key={meta.id}
+                n={meta.id}
+                label={meta.label}
+                optional={meta.optional}
+                active={step === meta.id}
+                done={step > meta.id}
+                onClick={() => setStep(meta.id)}
+              />
+            ))}
           </div>
         </div>
 
@@ -367,112 +352,162 @@ export function NewTripModal({
                 <label className="mb-1.5 block text-[11px] uppercase tracking-[0.1em] text-text-muted">
                   Destination
                 </label>
-                <div className="flex gap-2">
-                  <div className="relative flex-1">
-                    <MapPin className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" />
-                    <input
-                      type="text"
-                      value={destination}
-                      onChange={(e) => setDestination(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") searchFlights();
-                      }}
-                      placeholder="Search a city..."
-                      className="w-full rounded-lg border border-border bg-background px-3 py-2.5 pl-10 text-[14px] text-text-primary placeholder:text-text-muted focus:border-primary/40 focus:outline-none"
-                    />
-                  </div>
-                  <button
-                    onClick={searchFlights}
-                    disabled={!destination.trim()}
-                    className="rounded-lg bg-primary px-4 py-2.5 text-[13px] font-medium text-background transition hover:bg-primary-dim disabled:opacity-40"
-                  >
-                    Search
-                  </button>
+                <div className="relative">
+                  <MapPin className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" />
+                  <input
+                    type="text"
+                    value={destination}
+                    onChange={(e) => setDestination(e.target.value)}
+                    placeholder="Search a city..."
+                    className="w-full rounded-lg border border-border bg-background px-3 py-2.5 pl-10 text-[14px] text-text-primary placeholder:text-text-muted focus:border-primary/40 focus:outline-none"
+                  />
                 </div>
               </div>
 
-              {flightsLoading && (
-                <div className="space-y-2">
-                  <div className="text-[11px] uppercase tracking-[0.1em] text-text-muted">
-                    Searching flights...
-                  </div>
-                  {[0, 1, 2].map((i) => (
-                    <div
-                      key={i}
-                      className="h-16 animate-pulse rounded-lg border border-border bg-background/40"
-                    />
-                  ))}
+              <div>
+                <div className="mb-2 flex gap-1 rounded-lg border border-border bg-background/60 p-1">
+                  <button
+                    onClick={() => setDatesMode("manual")}
+                    className={cn(
+                      "flex-1 rounded-md px-3 py-1.5 text-[12px] font-medium transition",
+                      datesMode === "manual"
+                        ? "bg-surface-hover text-text-primary"
+                        : "text-text-muted hover:text-text-primary"
+                    )}
+                  >
+                    I know my dates
+                  </button>
+                  <button
+                    onClick={() => setDatesMode("flexible")}
+                    className={cn(
+                      "flex-1 rounded-md px-3 py-1.5 text-[12px] font-medium transition",
+                      datesMode === "flexible"
+                        ? "bg-surface-hover text-text-primary"
+                        : "text-text-muted hover:text-text-primary"
+                    )}
+                  >
+                    Help me pick dates
+                  </button>
                 </div>
-              )}
 
-              {flights && !flightsLoading && (
-                <div>
-                  <div className="mb-2 text-[11px] uppercase tracking-[0.1em] text-text-muted">
-                    Flights to {destination}
-                  </div>
-                  <div className="space-y-2">
-                    {flights.map((f) => {
-                      const active = selectedFlight?.airline === f.airline;
-                      return (
-                        <button
-                          key={f.airline}
-                          onClick={() => setSelectedFlight(f)}
-                          className={cn(
-                            "flex w-full items-center justify-between gap-3 rounded-lg border bg-background/40 px-4 py-3 text-left transition",
-                            active
-                              ? "border-primary/60 bg-primary/5"
-                              : "border-border hover:border-primary/30"
-                          )}
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-surface-hover">
-                              <Plane className="h-4 w-4 text-primary" strokeWidth={1.75} />
-                            </div>
-                            <div>
-                              <div className="text-[13px] font-medium text-text-primary">
-                                {f.airline}
-                              </div>
-                              <div className="text-[11px] text-text-muted">
-                                {f.departure} · {f.duration}
-                              </div>
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <div className="font-display text-[20px] text-text-primary">
-                              ${f.price}
-                            </div>
-                            <div className="text-[10px] text-text-muted">one-way</div>
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {flights && !flightsLoading && (
-                <div>
-                  <div className="mb-2 text-[11px] uppercase tracking-[0.1em] text-text-muted">
-                    Cheapest Day to Fly
-                  </div>
-                  <div className="grid grid-cols-7 gap-1.5">
-                    {heatmapDays.map((d, i) => (
-                      <HeatmapDay
-                        key={i}
-                        label={d.label}
-                        date={d.date}
-                        price={d.price}
-                        selected={selectedDayIdx === i}
-                        onClick={() => setSelectedDayIdx(i)}
+                {datesMode === "manual" ? (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="mb-1.5 block text-[11px] uppercase tracking-[0.1em] text-text-muted">
+                        Start
+                      </label>
+                      <input
+                        type="date"
+                        value={startDate}
+                        onChange={(e) => setStartDate(e.target.value)}
+                        className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-[14px] text-text-primary focus:border-primary/40 focus:outline-none"
                       />
-                    ))}
+                    </div>
+                    <div>
+                      <label className="mb-1.5 block text-[11px] uppercase tracking-[0.1em] text-text-muted">
+                        End
+                      </label>
+                      <input
+                        type="date"
+                        value={endDate}
+                        onChange={(e) => setEndDate(e.target.value)}
+                        className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-[14px] text-text-primary focus:border-primary/40 focus:outline-none"
+                      />
+                    </div>
                   </div>
-                </div>
-              )}
+                ) : (
+                  <div>
+                    <label className="mb-1.5 block text-[11px] uppercase tracking-[0.1em] text-text-muted">
+                      When are you open?
+                    </label>
+                    <textarea
+                      value={flexibleNote}
+                      onChange={(e) => setFlexibleNote(e.target.value)}
+                      placeholder="e.g. any weekend in November, avoiding midterms the 7th–10th"
+                      rows={3}
+                      className="w-full resize-none rounded-lg border border-border bg-background px-3 py-2.5 text-[14px] text-text-primary placeholder:text-text-muted focus:border-primary/40 focus:outline-none"
+                    />
+                    <div className="mt-2 flex items-start gap-2 rounded-lg border border-border bg-background/40 p-3 text-[11px] text-text-muted">
+                      <Sparkles className="mt-0.5 h-3 w-3 flex-shrink-0 text-primary" />
+                      We'll compare your group's calendars and suggest dates after you finish setup.
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
           {step === 2 && (
+            <div className="space-y-5">
+              <div className="flex items-start gap-2 rounded-lg border border-border bg-background/40 p-3 text-[12px] text-text-muted">
+                <Info className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-primary" />
+                <span>
+                  We don't hold real flight inventory. Book on a real site, then drop your confirmation here so the group sees it.
+                </span>
+              </div>
+
+              <div className="rounded-xl border border-border bg-background/40 p-5">
+                <div className="flex items-center gap-1.5 text-[12px] font-medium text-text-primary">
+                  <Plane className="h-3.5 w-3.5" />
+                  Search flights
+                </div>
+                <p className="mt-1 text-[11px] text-text-muted">
+                  {datesMode === "manual" && startDate && endDate
+                    ? `${destination || "Destination"} · ${startDate} → ${endDate}`
+                    : `${destination || "Destination"} · dates flexible`}
+                </p>
+                <a
+                  href={flightSearchUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => setFlightOpened(true)}
+                  className="mt-3 inline-flex items-center gap-1.5 rounded-md bg-primary/10 px-3 py-2 text-[12px] font-medium text-primary transition hover:bg-primary/20"
+                >
+                  Open Google Flights
+                  <ExternalLink className="h-3 w-3" />
+                </a>
+              </div>
+
+              <div>
+                <label className="mb-2 block text-[11px] uppercase tracking-[0.1em] text-text-muted">
+                  Confirm what you booked
+                </label>
+                <div className="grid grid-cols-2 gap-3">
+                  <input
+                    type="text"
+                    value={flightAirline}
+                    onChange={(e) => setFlightAirline(e.target.value)}
+                    placeholder="Airline"
+                    className="rounded-lg border border-border bg-background px-3 py-2.5 text-[14px] text-text-primary placeholder:text-text-muted focus:border-primary/40 focus:outline-none"
+                  />
+                  <div className="relative">
+                    <DollarSign className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" />
+                    <input
+                      type="number"
+                      value={flightPrice}
+                      onChange={(e) => setFlightPrice(e.target.value)}
+                      placeholder="Price"
+                      className="w-full rounded-lg border border-border bg-background px-3 py-2.5 pl-10 text-[14px] text-text-primary placeholder:text-text-muted focus:border-primary/40 focus:outline-none"
+                    />
+                  </div>
+                </div>
+                <input
+                  type="text"
+                  value={flightConfirmation}
+                  onChange={(e) => setFlightConfirmation(e.target.value)}
+                  placeholder="Confirmation code (optional)"
+                  className="mt-3 w-full rounded-lg border border-border bg-background px-3 py-2.5 text-[14px] text-text-primary placeholder:text-text-muted focus:border-primary/40 focus:outline-none"
+                />
+                {!flightOpened && (
+                  <p className="mt-2 text-[11px] text-text-muted">
+                    Haven't booked yet? Skip this step and come back later.
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {step === 3 && (
             <div className="space-y-4">
               <div>
                 <label className="mb-1.5 block text-[11px] uppercase tracking-[0.1em] text-text-muted">
@@ -483,19 +518,37 @@ export function NewTripModal({
                   <input
                     type="number"
                     value={budget}
-                    onChange={(e) => setBudget(e.target.value)}
+                    onChange={(e) => {
+                      setBudget(e.target.value);
+                      if (e.target.value) setNoBudget(false);
+                    }}
+                    disabled={noBudget}
                     placeholder="320"
-                    className="w-full rounded-lg border border-border bg-background px-3 py-2.5 pl-10 text-[14px] text-text-primary placeholder:text-text-muted focus:border-primary/40 focus:outline-none"
+                    className="w-full rounded-lg border border-border bg-background px-3 py-2.5 pl-10 text-[14px] text-text-primary placeholder:text-text-muted focus:border-primary/40 focus:outline-none disabled:opacity-40"
                   />
                 </div>
+                <label className="mt-3 flex cursor-pointer items-center gap-2 text-[12px] text-text-muted">
+                  <input
+                    type="checkbox"
+                    checked={noBudget}
+                    onChange={(e) => {
+                      setNoBudget(e.target.checked);
+                      if (e.target.checked) setBudget("");
+                    }}
+                    className="h-3.5 w-3.5 accent-primary"
+                  />
+                  No budget — don't track this one
+                </label>
               </div>
-              <div className="rounded-lg border border-border bg-background/40 px-4 py-3 text-[12px] text-text-muted">
-                You have{" "}
-                <span className="font-medium text-text-primary">
-                  ${TRIPS_BUDGET_REMAINING.toLocaleString()}
-                </span>{" "}
-                remaining in your Trips budget this semester
-              </div>
+              {!noBudget && (
+                <div className="rounded-lg border border-border bg-background/40 px-4 py-3 text-[12px] text-text-muted">
+                  You have{" "}
+                  <span className="font-medium text-text-primary">
+                    ${TRIPS_BUDGET_REMAINING.toLocaleString()}
+                  </span>{" "}
+                  remaining in your Trips budget this semester
+                </div>
+              )}
               {overBudget && (
                 <div className="rounded-lg border border-[#E8B572]/40 bg-[#E8B572]/10 px-4 py-3 text-[12px] text-[#E8B572]">
                   ⚠️ This puts you ${overBy.toLocaleString()} over your trips budget
@@ -504,7 +557,7 @@ export function NewTripModal({
             </div>
           )}
 
-          {step === 3 && (
+          {step === 4 && (
             <div className="space-y-5">
               <div>
                 <label className="mb-2 block text-[11px] uppercase tracking-[0.1em] text-text-muted">
@@ -571,7 +624,7 @@ export function NewTripModal({
             </div>
           )}
 
-          {step === 4 && (
+          {step === 5 && (
             <div className="space-y-5">
               <div>
                 <label className="mb-1.5 block text-[11px] uppercase tracking-[0.1em] text-text-muted">
@@ -738,7 +791,7 @@ export function NewTripModal({
             </div>
           )}
 
-          {step === 5 && (
+          {step === 6 && (
             <div className="space-y-4">
               <div className="rounded-xl border border-primary/20 bg-primary/5 p-5">
                 <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.12em] text-primary">
@@ -749,32 +802,47 @@ export function NewTripModal({
                   {destination || "Your trip"}
                 </h3>
                 <div className="mt-1 text-[12px] text-text-muted">
-                  Departing{" "}
-                  {selectedDayIdx !== null
-                    ? `${heatmapDays[selectedDayIdx].label} ${heatmapDays[selectedDayIdx].date}`
-                    : "(no date selected)"}
+                  {datesMode === "manual" && startDate && endDate
+                    ? `${startDate} → ${endDate}`
+                    : flexibleNote || "Dates flexible"}
                 </div>
               </div>
 
               <SummaryRow
                 label="Flight"
                 value={
-                  selectedFlight
-                    ? `${selectedFlight.airline} — $${selectedFlight.price} · ${selectedFlight.duration}`
-                    : "Not selected"
+                  flightSkipped || (!flightAirline && !flightConfirmation)
+                    ? "Not booked yet"
+                    : `${flightAirline || "—"}${
+                        flightPrice ? ` · $${Number(flightPrice).toLocaleString()}` : ""
+                      }${
+                        flightConfirmation ? ` · ${flightConfirmation}` : ""
+                      }`
                 }
               />
               <SummaryRow
                 label="Budget"
-                value={budget ? `$${Number(budget).toLocaleString()}` : "—"}
+                value={
+                  budgetSkipped || noBudget
+                    ? "Not tracked"
+                    : budget
+                    ? `$${Number(budget).toLocaleString()}`
+                    : "—"
+                }
               />
               <SummaryRow
                 label="Accommodation"
-                value={accommodation}
+                value={preferencesSkipped ? "Not set" : accommodation}
               />
               <SummaryRow
                 label="Preferences"
-                value={preferences.length ? preferences.join(" · ") : "None"}
+                value={
+                  preferencesSkipped
+                    ? "Skipped"
+                    : preferences.length
+                    ? preferences.join(" · ")
+                    : "None"
+                }
               />
               <SummaryRow
                 label="Travelers"
@@ -783,7 +851,9 @@ export function NewTripModal({
                 }`}
               />
               <SummaryRow label="Trip Captain" value={`👑 ${captain}`} />
-              {notes && <SummaryRow label="Notes" value={notes} />}
+              {!preferencesSkipped && notes && (
+                <SummaryRow label="Notes" value={notes} />
+              )}
             </div>
           )}
         </div>
@@ -796,22 +866,32 @@ export function NewTripModal({
           >
             {step === 1 ? "Cancel" : "Back"}
           </button>
-          {step < 5 ? (
-            <button
-              onClick={next}
-              disabled={!canContinue()}
-              className="rounded-lg bg-primary px-4 py-2 text-[13px] font-medium text-background transition hover:bg-primary-dim disabled:opacity-40"
-            >
-              Continue
-            </button>
-          ) : (
-            <button
-              onClick={handleCreate}
-              className="rounded-lg bg-primary px-4 py-2 text-[13px] font-medium text-background transition hover:bg-primary-dim"
-            >
-              Create Trip
-            </button>
-          )}
+          <div className="flex items-center gap-2">
+            {currentStep.optional && step < 6 && (
+              <button
+                onClick={skipCurrent}
+                className="rounded-lg border border-border px-3 py-2 text-[13px] font-medium text-text-muted transition hover:text-text-primary"
+              >
+                Skip for now
+              </button>
+            )}
+            {step < 6 ? (
+              <button
+                onClick={next}
+                disabled={!canContinue()}
+                className="rounded-lg bg-primary px-4 py-2 text-[13px] font-medium text-background transition hover:bg-primary-dim disabled:opacity-40"
+              >
+                Continue
+              </button>
+            ) : (
+              <button
+                onClick={handleCreate}
+                className="rounded-lg bg-primary px-4 py-2 text-[13px] font-medium text-background transition hover:bg-primary-dim"
+              >
+                Create Trip
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </div>
