@@ -12,6 +12,15 @@ export type BookingItem = {
   note?: string;
 };
 
+export type TripExpense = {
+  id: string;
+  description: string;
+  amount: number;
+  paidBy: string;
+  splitBetween: string[];
+  settled?: Record<string, boolean>;
+};
+
 export type Trip = {
   id: string;
   city: string;
@@ -25,7 +34,33 @@ export type Trip = {
   status: TripStatus;
   accent: string; // tailwind gradient classes
   captain: string;
+  tripCaptain: string;
+  flightBooked: boolean;
+  waitlist?: string[];
   bookingStatus: BookingItem[];
+  expenses?: TripExpense[];
+};
+
+export type FundingSource = {
+  id: string;
+  label: string;
+  amount: number;
+  recurring: boolean;
+};
+
+export type FriendTrip = {
+  friend: string;
+  avatar: string;
+  destination: string;
+  flag: string;
+  dates: string;
+  recs: string[];
+};
+
+export type Friend = {
+  name: string;
+  avatar: string;
+  phone: string;
 };
 
 export type Destination = {
@@ -81,9 +116,34 @@ export const TRIPS: Trip[] = [
     status: "Confirmed",
     accent: "from-[#6B4423] via-[#8B5A2B] to-[#E8D5A3]",
     captain: "Henry",
+    tripCaptain: "Henry",
+    flightBooked: true,
     bookingStatus: [
       { item: "Flights", status: "booked", note: "¥12,400 RT" },
       { item: "Accommodation", status: "booked", note: "Hostel confirmed" },
+    ],
+    expenses: [
+      {
+        id: "e1",
+        description: "Hostel (2 nights)",
+        amount: 280,
+        paidBy: "Henry",
+        splitBetween: ["Henry", "Jake", "Maya", "Priya"],
+      },
+      {
+        id: "e2",
+        description: "Train to Kyoto",
+        amount: 160,
+        paidBy: "Maya",
+        splitBetween: ["Henry", "Jake", "Maya", "Priya"],
+      },
+      {
+        id: "e3",
+        description: "Group dinner",
+        amount: 92,
+        paidBy: "Jake",
+        splitBetween: ["Henry", "Jake", "Priya"],
+      },
     ],
   },
   {
@@ -98,9 +158,27 @@ export const TRIPS: Trip[] = [
     status: "Planning",
     accent: "from-[#7A2E2E] via-[#B85C3C] to-[#E8B572]",
     captain: "Jake",
+    tripCaptain: "Jake",
+    flightBooked: false,
     bookingStatus: [
       { item: "Flights", status: "book_now", note: "Prices up 18% this week" },
       { item: "Accommodation", status: "book_soon" },
+    ],
+    expenses: [
+      {
+        id: "e1",
+        description: "Airbnb deposit",
+        amount: 180,
+        paidBy: "Jake",
+        splitBetween: ["Henry", "Jake", "Sam"],
+      },
+      {
+        id: "e2",
+        description: "Airport transfer",
+        amount: 45,
+        paidBy: "Sam",
+        splitBetween: ["Henry", "Jake", "Sam"],
+      },
     ],
   },
   {
@@ -115,9 +193,28 @@ export const TRIPS: Trip[] = [
     status: "Planning",
     accent: "from-[#1F5F5B] via-[#4A9EBF] to-[#9FD4C5]",
     captain: "TBD",
+    tripCaptain: "Maya",
+    flightBooked: false,
+    waitlist: ["Alex"],
     bookingStatus: [
       { item: "Flights", status: "book_soon" },
       { item: "Accommodation", status: "book_now", note: "Dec fills fast" },
+    ],
+    expenses: [
+      {
+        id: "e1",
+        description: "Villa reservation",
+        amount: 620,
+        paidBy: "Maya",
+        splitBetween: ["Henry", "Maya", "Priya", "Sam", "Leo", "Nina"],
+      },
+      {
+        id: "e2",
+        description: "Scooter rentals",
+        amount: 120,
+        paidBy: "Leo",
+        splitBetween: ["Henry", "Maya", "Leo", "Nina"],
+      },
     ],
   },
   {
@@ -129,15 +226,96 @@ export const TRIPS: Trip[] = [
     endDate: "2025-10-20",
     people: ["Henry", "Jake", "Maya", "Leo", "Nina"],
     estimatedCost: 310,
-    actualCost: 310,
+    actualCost: 268,
     status: "Completed",
     accent: "from-[#2E3A5F] via-[#5B6EA8] to-[#A9B5D9]",
     captain: "Marcus",
+    tripCaptain: "Leo",
+    flightBooked: true,
     bookingStatus: [
       { item: "Flights", status: "booked" },
       { item: "Accommodation", status: "booked" },
     ],
+    expenses: [
+      {
+        id: "e1",
+        description: "Hostel",
+        amount: 240,
+        paidBy: "Leo",
+        splitBetween: ["Henry", "Jake", "Maya", "Leo", "Nina"],
+      },
+      {
+        id: "e2",
+        description: "Karaoke night",
+        amount: 85,
+        paidBy: "Nina",
+        splitBetween: ["Henry", "Jake", "Maya", "Leo", "Nina"],
+      },
+      {
+        id: "e3",
+        description: "BBQ dinner",
+        amount: 140,
+        paidBy: "Henry",
+        splitBetween: ["Henry", "Jake", "Maya", "Leo", "Nina"],
+      },
+    ],
   },
+];
+
+export const FRIENDS: Friend[] = [
+  { name: "Henry", avatar: "HE", phone: "+15550000001" },
+  { name: "Jake", avatar: "JK", phone: "+15550000002" },
+  { name: "Maya", avatar: "MY", phone: "+15550000003" },
+  { name: "Priya", avatar: "PR", phone: "+15550000004" },
+  { name: "Sam", avatar: "SM", phone: "+15550000005" },
+  { name: "Leo", avatar: "LE", phone: "+15550000006" },
+  { name: "Nina", avatar: "NI", phone: "+15550000007" },
+  { name: "Alex", avatar: "AL", phone: "+15550000008" },
+  { name: "Chris", avatar: "CR", phone: "+15550000009" },
+];
+
+export const FRIEND_TRIPS: FriendTrip[] = [
+  {
+    friend: "Jake",
+    avatar: "JK",
+    destination: "Kyoto",
+    flag: "🇯🇵",
+    dates: "Oct 18-20",
+    recs: [
+      "Visit Fushimi Inari at 6am",
+      "Stay in Gion district",
+      "Book ryokan 3+ weeks out",
+    ],
+  },
+  {
+    friend: "Maya",
+    avatar: "MY",
+    destination: "Lisbon",
+    flag: "🇵🇹",
+    dates: "Nov 1-3",
+    recs: [
+      "Take the 28 tram",
+      "Pasteis de Belem for breakfast",
+      "Airbnb in Alfama",
+    ],
+  },
+  {
+    friend: "Chris",
+    avatar: "CR",
+    destination: "Prague",
+    flag: "🇨🇿",
+    dates: "Sep 27-29",
+    recs: [
+      "Book hostel bar crawl night 1",
+      "Day trip to Cesky Krumlov",
+      "Avoid Old Town Square restaurants",
+    ],
+  },
+];
+
+export const FUNDING_SOURCES: FundingSource[] = [
+  { id: "1", label: "Parent Contribution", amount: 3000, recurring: false },
+  { id: "2", label: "Personal Savings", amount: 2000, recurring: false },
 ];
 
 export const DESTINATIONS: Destination[] = [

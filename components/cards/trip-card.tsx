@@ -1,6 +1,7 @@
 "use client";
 
-import { Users, Split, Plus, ArrowUpRight, Zap } from "lucide-react";
+import Link from "next/link";
+import { Users, Split, Plus, ArrowUpRight, Zap, AlertTriangle } from "lucide-react";
 import type { Trip, BookingItem } from "@/lib/mock-data";
 import { formatCurrency, formatDateRange, initials } from "@/lib/utils";
 import { cn } from "@/lib/utils";
@@ -64,6 +65,13 @@ function BookingChip({ item }: { item: BookingItem }) {
   );
 }
 
+function daysUntil(dateStr: string): number {
+  const d = new Date(dateStr);
+  const now = new Date();
+  const ms = d.getTime() - now.getTime();
+  return Math.ceil(ms / (1000 * 60 * 60 * 24));
+}
+
 export function TripCard({ trip }: { trip: Trip }) {
   const status = STATUS_STYLES[trip.status];
   const showingCost = trip.actualCost ?? trip.estimatedCost;
@@ -71,7 +79,15 @@ export function TripCard({ trip }: { trip: Trip }) {
   const urgent = trip.bookingStatus.find(
     (b) => b.status === "book_now" && b.item === "Flights"
   );
-  const isCaptain = trip.captain === "Henry";
+  const isCaptain = trip.tripCaptain === "Henry" || trip.captain === "Henry";
+
+  const daysAway = daysUntil(trip.startDate);
+  const showBookEarly =
+    (trip.status === "Planning" || trip.status === "Confirmed") &&
+    daysAway > 21 &&
+    !trip.flightBooked;
+
+  const captainName = trip.tripCaptain ?? trip.captain;
 
   return (
     <div className="card card-hover overflow-hidden">
@@ -97,6 +113,12 @@ export function TripCard({ trip }: { trip: Trip }) {
           <span className={cn("h-1.5 w-1.5 rounded-full", status.dot)} />
           {trip.status}
         </div>
+        {showBookEarly && (
+          <div className="absolute left-4 top-4 flex items-center gap-1 rounded-full bg-[#E8B572]/90 px-2.5 py-1 text-[11px] font-medium text-[#1a1a0a]">
+            <AlertTriangle className="h-3 w-3" strokeWidth={2.25} />
+            Book flights soon
+          </div>
+        )}
         <div className="absolute bottom-5 left-6 right-6">
           <div className="mb-1 flex items-center gap-2 text-[12px] text-white/80">
             <span>{trip.flag}</span>
@@ -123,20 +145,44 @@ export function TripCard({ trip }: { trip: Trip }) {
         {/* Avatar stack */}
         <div className="mb-2 flex items-center">
           <div className="flex -space-x-2">
-            {trip.people.slice(0, 5).map((p, i) => (
-              <div
-                key={i}
-                className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-surface bg-surface-hover text-[10px] font-medium text-text-primary"
-                title={p}
-              >
-                {initials(p)}
-              </div>
-            ))}
+            {trip.people.slice(0, 5).map((p, i) => {
+              const isTripCaptain = p === captainName;
+              return (
+                <div
+                  key={i}
+                  className={cn(
+                    "group/avatar relative flex h-8 items-center gap-1 rounded-full border-2 border-surface bg-surface-hover text-[10px] font-medium text-text-primary",
+                    isTripCaptain
+                      ? "w-auto px-1.5 ring-1 ring-primary/50"
+                      : "w-8 justify-center"
+                  )}
+                  title={isTripCaptain ? `${p} is Trip Captain` : p}
+                >
+                  {isTripCaptain && <span className="text-[12px]">👑</span>}
+                  <span>{initials(p)}</span>
+                  {isTripCaptain && (
+                    <span className="pointer-events-none absolute -top-8 left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded-md bg-background px-2 py-1 text-[10px] text-text-primary opacity-0 shadow-lg ring-1 ring-border transition group-hover/avatar:opacity-100">
+                      {p} is Trip Captain
+                    </span>
+                  )}
+                </div>
+              );
+            })}
             {trip.people.length > 5 && (
               <div className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-surface bg-surface-hover text-[10px] font-medium text-text-muted">
                 +{trip.people.length - 5}
               </div>
             )}
+            {trip.waitlist?.map((p, i) => (
+              <div
+                key={`w-${i}`}
+                className="flex h-8 items-center gap-1 rounded-full border-2 border-dashed border-border bg-background/60 px-2 text-[10px] font-medium text-text-muted"
+                title={`${p} (waitlisted)`}
+              >
+                <span>⏱</span>
+                <span>{initials(p)}</span>
+              </div>
+            ))}
           </div>
         </div>
 
@@ -147,7 +193,7 @@ export function TripCard({ trip }: { trip: Trip }) {
             isCaptain ? "text-primary" : "text-text-muted"
           )}
         >
-          {isCaptain ? "You're running this" : `${trip.captain} is running this`}
+          {isCaptain ? "You're running this" : `${captainName} is running this`}
         </div>
 
         {/* Cost */}
@@ -180,22 +226,26 @@ export function TripCard({ trip }: { trip: Trip }) {
 
         {/* Actions */}
         <div className="flex items-center gap-2">
-          <button className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-surface-hover px-3 py-2 text-[12px] font-medium text-text-primary transition hover:bg-surface-hover/70">
+          <Link
+            href={`/trips/${trip.id}`}
+            className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-surface-hover px-3 py-2 text-[12px] font-medium text-text-primary transition hover:bg-surface-hover/70"
+          >
             View Details
             <ArrowUpRight className="h-3 w-3" />
-          </button>
+          </Link>
           <button
             className="flex h-8 w-8 items-center justify-center rounded-lg border border-border text-text-muted transition hover:border-primary/40 hover:text-text-primary"
             title="Add Person"
           >
             <Plus className="h-3.5 w-3.5" strokeWidth={2} />
           </button>
-          <button
+          <Link
+            href={`/trips/${trip.id}#expenses`}
             className="flex h-8 w-8 items-center justify-center rounded-lg border border-border text-text-muted transition hover:border-primary/40 hover:text-text-primary"
             title="Split Costs"
           >
             <Split className="h-3.5 w-3.5" strokeWidth={2} />
-          </button>
+          </Link>
         </div>
       </div>
     </div>

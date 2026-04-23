@@ -23,15 +23,15 @@ export default function HomePage() {
   return (
     <>
       <Header />
-      <div className="px-10 py-8">
-        <div className="grid grid-cols-3 gap-5">
+      <div className="px-4 py-6 sm:px-10 sm:py-8">
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
           {/* Budget Snapshot - full width */}
-          <div className="col-span-3">
+          <div className="lg:col-span-3">
             <BudgetSnapshot />
           </div>
 
           {/* Upcoming Trips - 2 cols */}
-          <div className="col-span-2 card card-hover p-7">
+          <div className="card card-hover p-5 sm:p-7 lg:col-span-2">
             <div className="mb-5 flex items-center justify-between">
               <div>
                 <div className="text-[12px] uppercase tracking-[0.12em] text-text-muted">
@@ -98,7 +98,7 @@ export default function HomePage() {
           </div>
 
           {/* Friends Activity - 1 col */}
-          <div className="card card-hover p-7">
+          <div className="card card-hover p-5 sm:p-7">
             <div className="mb-5">
               <div className="text-[12px] uppercase tracking-[0.12em] text-text-muted">
                 The group
@@ -130,7 +130,7 @@ export default function HomePage() {
           </div>
 
           {/* Trip Ideas - 3 col */}
-          <div className="col-span-3 card card-hover p-7">
+          <div className="card card-hover p-5 sm:p-7 lg:col-span-3">
             <div className="mb-5 flex items-center justify-between">
               <div>
                 <div className="text-[12px] uppercase tracking-[0.12em] text-text-muted">
@@ -148,7 +148,7 @@ export default function HomePage() {
               </Link>
             </div>
 
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {ideas.map((d) => (
                 <div
                   key={d.id}

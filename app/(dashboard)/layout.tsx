@@ -1,4 +1,5 @@
 import { Sidebar } from "@/components/sidebar";
+import { BottomNav } from "@/components/bottom-nav";
 
 export default function DashboardLayout({
   children,
@@ -8,7 +9,10 @@ export default function DashboardLayout({
   return (
     <div className="min-h-screen bg-background text-text-primary">
       <Sidebar />
-      <main className="ml-[240px] min-h-screen">{children}</main>
+      <main className="min-h-screen pb-16 md:ml-[240px] md:pb-0">
+        {children}
+      </main>
+      <BottomNav />
     </div>
   );
 }
