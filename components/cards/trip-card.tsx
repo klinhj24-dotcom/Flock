@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { Users, Split, Plus, ArrowUpRight, Zap, AlertTriangle } from "lucide-react";
+import { coverPhoto, DESTINATION_PHOTO_SEEDS } from "@/lib/mock-data";
 import type { Trip, BookingItem } from "@/lib/mock-data";
 import { formatCurrency, formatDateRange, initials } from "@/lib/utils";
 import { cn } from "@/lib/utils";
@@ -105,11 +106,16 @@ export function TripCard({ trip }: { trip: Trip }) {
       {/* Hero */}
       <div
         className={cn(
-          "gradient-noise relative h-[180px] bg-gradient-to-br p-6",
+          "gradient-noise relative h-[200px] overflow-hidden bg-gradient-to-br p-6",
           trip.accent
         )}
+        style={{
+          backgroundImage: `linear-gradient(to top, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.15) 55%, rgba(0,0,0,0.4) 100%), url(${coverPhoto(trip.photoSeed ?? DESTINATION_PHOTO_SEEDS[trip.city] ?? trip.city.toLowerCase(), 900, 500)})`,
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+        }}
       >
-        <div className="absolute right-4 top-4 flex items-center gap-1.5 rounded-full bg-black/30 px-2.5 py-1 text-[11px] font-medium text-white backdrop-blur">
+        <div className="absolute right-4 top-4 flex items-center gap-1.5 rounded-full bg-black/40 px-2.5 py-1 text-[11px] font-medium text-white backdrop-blur">
           <span className={cn("h-1.5 w-1.5 rounded-full", status.dot)} />
           {trip.status}
         </div>

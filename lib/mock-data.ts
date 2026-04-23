@@ -39,6 +39,7 @@ export type Trip = {
   waitlist?: string[];
   bookingStatus: BookingItem[];
   expenses?: TripExpense[];
+  photoSeed?: string;
 };
 
 export type FundingSource = {
@@ -61,6 +62,18 @@ export type Friend = {
   name: string;
   avatar: string;
   phone: string;
+  venmo?: string;
+  email?: string;
+};
+
+export type BudgetLineItem = {
+  id: string;
+  category: string;
+  label: string;
+  planned: number;
+  spent: number;
+  note?: string;
+  preDeparture?: boolean;
 };
 
 export type Destination = {
@@ -74,6 +87,7 @@ export type Destination = {
   bestMonths: string;
   vibes: string[];
   accent: string;
+  photoSeed?: string;
 };
 
 export type BudgetCategory = {
@@ -105,6 +119,42 @@ export const USER = {
 
 export const TRIPS: Trip[] = [
   {
+    id: "t0",
+    city: "Osaka",
+    country: "Japan",
+    flag: "🇯🇵",
+    startDate: "2026-04-22",
+    endDate: "2026-04-25",
+    people: ["Henry", "Jake", "Maya", "Leo"],
+    estimatedCost: 380,
+    status: "Confirmed",
+    accent: "from-[#4A3518] via-[#8B6B3F] to-[#E8D5A3]",
+    captain: "Henry",
+    tripCaptain: "Henry",
+    flightBooked: true,
+    photoSeed: "osaka-neon",
+    bookingStatus: [
+      { item: "Flights", status: "booked", note: "Round-trip confirmed" },
+      { item: "Accommodation", status: "booked", note: "Hostel in Namba" },
+    ],
+    expenses: [
+      {
+        id: "e1",
+        description: "Hostel (3 nights)",
+        amount: 240,
+        paidBy: "Henry",
+        splitBetween: ["Henry", "Jake", "Maya", "Leo"],
+      },
+      {
+        id: "e2",
+        description: "Shinkansen tickets",
+        amount: 180,
+        paidBy: "Jake",
+        splitBetween: ["Henry", "Jake", "Maya", "Leo"],
+      },
+    ],
+  },
+  {
     id: "t1",
     city: "Kyoto",
     country: "Japan",
@@ -118,6 +168,7 @@ export const TRIPS: Trip[] = [
     captain: "Henry",
     tripCaptain: "Henry",
     flightBooked: true,
+    photoSeed: "kyoto-temple",
     bookingStatus: [
       { item: "Flights", status: "booked", note: "¥12,400 RT" },
       { item: "Accommodation", status: "booked", note: "Hostel confirmed" },
@@ -160,6 +211,7 @@ export const TRIPS: Trip[] = [
     captain: "Jake",
     tripCaptain: "Jake",
     flightBooked: false,
+    photoSeed: "bangkok-street",
     bookingStatus: [
       { item: "Flights", status: "book_now", note: "Prices up 18% this week" },
       { item: "Accommodation", status: "book_soon" },
@@ -196,6 +248,7 @@ export const TRIPS: Trip[] = [
     tripCaptain: "Maya",
     flightBooked: false,
     waitlist: ["Alex"],
+    photoSeed: "bali-rice",
     bookingStatus: [
       { item: "Flights", status: "book_soon" },
       { item: "Accommodation", status: "book_now", note: "Dec fills fast" },
@@ -232,6 +285,7 @@ export const TRIPS: Trip[] = [
     captain: "Marcus",
     tripCaptain: "Leo",
     flightBooked: true,
+    photoSeed: "seoul-night",
     bookingStatus: [
       { item: "Flights", status: "booked" },
       { item: "Accommodation", status: "booked" },
@@ -263,15 +317,54 @@ export const TRIPS: Trip[] = [
 ];
 
 export const FRIENDS: Friend[] = [
-  { name: "Henry", avatar: "HE", phone: "+15550000001" },
-  { name: "Jake", avatar: "JK", phone: "+15550000002" },
-  { name: "Maya", avatar: "MY", phone: "+15550000003" },
-  { name: "Priya", avatar: "PR", phone: "+15550000004" },
-  { name: "Sam", avatar: "SM", phone: "+15550000005" },
-  { name: "Leo", avatar: "LE", phone: "+15550000006" },
-  { name: "Nina", avatar: "NI", phone: "+15550000007" },
-  { name: "Alex", avatar: "AL", phone: "+15550000008" },
-  { name: "Chris", avatar: "CR", phone: "+15550000009" },
+  { name: "Henry", avatar: "HE", phone: "+15550000001", venmo: "henry-flock", email: "henry@flock.app" },
+  { name: "Jake", avatar: "JK", phone: "+15550000002", venmo: "jake-flock", email: "jake@flock.app" },
+  { name: "Maya", avatar: "MY", phone: "+15550000003", venmo: "maya-flock", email: "maya@flock.app" },
+  { name: "Priya", avatar: "PR", phone: "+15550000004", venmo: "priya-flock", email: "priya@flock.app" },
+  { name: "Sam", avatar: "SM", phone: "+15550000005", venmo: "sam-flock", email: "sam@flock.app" },
+  { name: "Leo", avatar: "LE", phone: "+15550000006", venmo: "leo-flock", email: "leo@flock.app" },
+  { name: "Nina", avatar: "NI", phone: "+15550000007", venmo: "nina-flock", email: "nina@flock.app" },
+  { name: "Alex", avatar: "AL", phone: "+15550000008", venmo: "alex-flock", email: "alex@flock.app" },
+  { name: "Chris", avatar: "CR", phone: "+15550000009", venmo: "chris-flock", email: "chris@flock.app" },
+];
+
+// Rotating hero photos (Picsum seeds give deterministic picturesque images)
+export const HERO_PHOTOS: { seed: string; caption: string }[] = [
+  { seed: "kyoto-lanterns", caption: "A quiet morning in Kyoto" },
+  { seed: "lisbon-tram", caption: "Lisbon's yellow trams" },
+  { seed: "bali-beach", caption: "Bali shoreline" },
+  { seed: "bangkok-night", caption: "Bangkok after dark" },
+  { seed: "prague-bridge", caption: "Charles Bridge at dawn" },
+  { seed: "seoul-street", caption: "Seoul side streets" },
+];
+
+export const BUDGET_LINE_ITEMS: BudgetLineItem[] = [
+  // Pre-departure
+  { id: "l1", category: "Pre-departure", label: "Flight into country", planned: 1200, spent: 1180, preDeparture: true, note: "Round-trip, ORD → HND" },
+  { id: "l2", category: "Pre-departure", label: "Student visa", planned: 180, spent: 180, preDeparture: true },
+  { id: "l3", category: "Pre-departure", label: "Travel insurance", planned: 240, spent: 240, preDeparture: true },
+  { id: "l4", category: "Pre-departure", label: "Vaccinations", planned: 120, spent: 90, preDeparture: true },
+  // Housing
+  { id: "l5", category: "Housing", label: "Dorm / Apartment", planned: 3200, spent: 3200, note: "4 months" },
+  { id: "l6", category: "Housing", label: "Security deposit", planned: 400, spent: 400 },
+  // Meals
+  { id: "l7", category: "Daily Food", label: "Groceries", planned: 1600, spent: 620 },
+  { id: "l8", category: "Daily Food", label: "Eating out", planned: 800, spent: 270 },
+  // Weekend Trips
+  { id: "l9", category: "Weekend Trips", label: "Flights / trains", planned: 2200, spent: 980 },
+  { id: "l10", category: "Weekend Trips", label: "Lodging", planned: 1400, spent: 620 },
+  { id: "l11", category: "Weekend Trips", label: "Food on trips", planned: 400, spent: 240 },
+  // Transportation
+  { id: "l12", category: "Transportation", label: "Metro pass", planned: 600, spent: 180 },
+  { id: "l13", category: "Transportation", label: "Taxis / Uber", planned: 200, spent: 30 },
+  // Activities
+  { id: "l14", category: "Activities", label: "Museums, events", planned: 400, spent: 120 },
+  { id: "l15", category: "Activities", label: "Classes / workshops", planned: 200, spent: 60 },
+  // Emergency Fund
+  { id: "l16", category: "Emergency Fund", label: "Rainy day buffer", planned: 1000, spent: 0 },
+  // Miscellaneous
+  { id: "l17", category: "Miscellaneous", label: "Shopping / gifts", planned: 400, spent: 180 },
+  { id: "l18", category: "Miscellaneous", label: "Toiletries / supplies", planned: 200, spent: 60 },
 ];
 
 export const FRIEND_TRIPS: FriendTrip[] = [
@@ -556,3 +649,41 @@ export const LIFESTYLE_MULTIPLIER: Record<string, number> = {
 };
 
 export const VIBES = ["Beach", "City", "Nature", "Culture", "Party"] as const;
+
+/** Picsum seed → 1600x900 cover photo URL */
+export function coverPhoto(seed: string, w = 1600, h = 900): string {
+  return `https://picsum.photos/seed/${encodeURIComponent(seed)}/${w}/${h}`;
+}
+
+/** Today falls within the trip's date range (inclusive). */
+export function isTripActive(trip: Trip, now: Date = new Date()): boolean {
+  const start = new Date(trip.startDate).getTime();
+  const end = new Date(trip.endDate).getTime() + 24 * 60 * 60 * 1000 - 1;
+  const t = now.getTime();
+  return t >= start && t <= end;
+}
+
+/** Returns the trip currently happening, else the next upcoming non-completed trip, else null. */
+export function pickCurrentOrNextTrip(trips: Trip[], now: Date = new Date()): Trip | null {
+  const active = trips.find((t) => isTripActive(t, now));
+  if (active) return active;
+  const upcoming = trips
+    .filter((t) => t.status !== "Completed" && new Date(t.startDate).getTime() > now.getTime())
+    .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
+  return upcoming[0] ?? null;
+}
+
+// Per-destination photo seeds (for Discover + trip cards)
+export const DESTINATION_PHOTO_SEEDS: Record<string, string> = {
+  Kyoto: "kyoto-temple",
+  Bangkok: "bangkok-street",
+  Bali: "bali-rice",
+  Seoul: "seoul-night",
+  Taipei: "taipei-market",
+  "Hong Kong": "hongkong-skyline",
+  Osaka: "osaka-neon",
+  "Chiang Mai": "chiangmai-temple",
+  Lisbon: "lisbon-tram",
+  Prague: "prague-bridge",
+  Budapest: "budapest-bath",
+};

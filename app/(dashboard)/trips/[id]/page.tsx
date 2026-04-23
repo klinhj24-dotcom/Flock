@@ -13,6 +13,7 @@ import {
   Clock,
 } from "lucide-react";
 import { Header } from "@/components/header";
+import { SettleUpModal } from "@/components/modals/settle-up-modal";
 import {
   TRIPS,
   FRIENDS,
@@ -249,6 +250,10 @@ function ExpensesTab({ trip }: { trip: Trip }) {
   const [amount, setAmount] = useState("");
   const [paidBy, setPaidBy] = useState(trip.people[0]);
   const [splitBetween, setSplitBetween] = useState<string[]>([...trip.people]);
+  const [settleTarget, setSettleTarget] = useState<{
+    person: string;
+    amount: number;
+  } | null>(null);
 
   const addExpense = () => {
     const a = Number(amount);
@@ -444,8 +449,13 @@ function ExpensesTab({ trip }: { trip: Trip }) {
                     </span>
                     {rounded < -0.5 && !settled && (
                       <button
-                        onClick={() => settleUp(p)}
-                        className="rounded-full border border-border bg-surface-hover px-2.5 py-1 text-[11px] font-medium text-text-primary transition hover:border-primary/40"
+                        onClick={() =>
+                          setSettleTarget({
+                            person: p,
+                            amount: Math.abs(rounded),
+                          })
+                        }
+                        className="rounded-full border border-primary/40 bg-primary/10 px-2.5 py-1 text-[11px] font-medium text-primary transition hover:bg-primary/20"
                       >
                         Settle Up
                       </button>
@@ -496,6 +506,18 @@ function ExpensesTab({ trip }: { trip: Trip }) {
           </div>
         </div>
       </div>
+
+      <SettleUpModal
+        open={settleTarget !== null}
+        onClose={() => setSettleTarget(null)}
+        person={settleTarget?.person ?? ""}
+        amountOwed={settleTarget?.amount ?? 0}
+        owedTo={trip.people[0]}
+        tripCity={trip.city}
+        onMarkSettled={() => {
+          if (settleTarget) settleUp(settleTarget.person);
+        }}
+      />
     </div>
   );
 }

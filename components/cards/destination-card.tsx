@@ -1,6 +1,7 @@
 "use client";
 
 import { Heart, Plane, Calendar } from "lucide-react";
+import { coverPhoto, DESTINATION_PHOTO_SEEDS } from "@/lib/mock-data";
 import type { Destination } from "@/lib/mock-data";
 import { formatCurrency, cn } from "@/lib/utils";
 
@@ -18,9 +19,14 @@ export function DestinationCard({
       {/* Hero */}
       <div
         className={cn(
-          "gradient-noise relative h-[200px] bg-gradient-to-br p-6",
+          "gradient-noise relative h-[220px] overflow-hidden bg-gradient-to-br p-6",
           destination.accent
         )}
+        style={{
+          backgroundImage: `linear-gradient(to top, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.1) 55%, rgba(0,0,0,0.3) 100%), url(${coverPhoto(destination.photoSeed ?? DESTINATION_PHOTO_SEEDS[destination.city] ?? destination.city.toLowerCase(), 900, 500)})`,
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+        }}
       >
         <button
           onClick={onToggleWishlist}

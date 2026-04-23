@@ -3,11 +3,20 @@
 import Link from "next/link";
 import { ArrowRight, Plus, Users, Plane } from "lucide-react";
 import { Header } from "@/components/header";
-import { BudgetSnapshot } from "@/components/cards/budget-snapshot";
+import { BudgetBriefing } from "@/components/cards/budget-briefing";
+import {
+  CurrentTripCard,
+  EmptyCurrentTrip,
+} from "@/components/cards/current-trip";
+import { PhotoRotator } from "@/components/photo-rotator";
 import {
   TRIPS,
   DESTINATIONS,
   ACTIVITY,
+  USER,
+  coverPhoto,
+  DESTINATION_PHOTO_SEEDS,
+  pickCurrentOrNextTrip,
 } from "@/lib/mock-data";
 import {
   formatCurrency,
@@ -17,17 +26,44 @@ import {
 } from "@/lib/utils";
 
 export default function HomePage() {
-  const upcoming = TRIPS.filter((t) => t.status !== "Completed").slice(0, 3);
+  const currentTrip = pickCurrentOrNextTrip(TRIPS);
+  const upcoming = TRIPS.filter(
+    (t) => t.status !== "Completed" && t.id !== currentTrip?.id
+  ).slice(0, 3);
   const ideas = DESTINATIONS.slice(0, 3);
 
   return (
     <>
       <Header />
       <div className="px-4 py-6 sm:px-10 sm:py-8">
+        {/* Hero photo carousel */}
+        <PhotoRotator className="mb-5 h-[220px] sm:h-[280px]">
+          <div className="flex h-[220px] flex-col justify-end p-6 sm:h-[280px] sm:p-8">
+            <div className="text-[11px] font-medium uppercase tracking-[0.2em] text-white/80">
+              Good morning, {USER.firstName}
+            </div>
+            <h1 className="mt-1 font-display text-[32px] leading-tight text-white sm:text-[44px]">
+              Where to this weekend?
+            </h1>
+            <p className="mt-1 text-[13px] text-white/70 sm:text-[14px]">
+              {USER.daysLeft} days left in {USER.homeCity}. Make them count.
+            </p>
+          </div>
+        </PhotoRotator>
+
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
-          {/* Budget Snapshot - full width */}
+          {/* Current trip — full width, featured */}
           <div className="lg:col-span-3">
-            <BudgetSnapshot />
+            {currentTrip ? (
+              <CurrentTripCard trip={currentTrip} />
+            ) : (
+              <EmptyCurrentTrip />
+            )}
+          </div>
+
+          {/* Budget briefing — full width */}
+          <div className="lg:col-span-3">
+            <BudgetBriefing />
           </div>
 
           {/* Upcoming Trips - 2 cols */}
@@ -50,16 +86,28 @@ export default function HomePage() {
             </div>
 
             <div className="space-y-3">
+              {upcoming.length === 0 && (
+                <div className="rounded-lg border border-dashed border-border px-4 py-6 text-center text-[12px] text-text-muted">
+                  Clear calendar. Plan something.
+                </div>
+              )}
               {upcoming.map((trip) => (
-                <div
+                <Link
+                  href={`/trips/${trip.id}`}
                   key={trip.id}
                   className="group flex items-center gap-4 rounded-xl border border-border bg-background/40 px-4 py-3.5 transition hover:border-primary/30 hover:bg-surface-hover/40"
                 >
                   <div
-                    className={cn(
-                      "gradient-noise h-12 w-12 flex-shrink-0 rounded-lg bg-gradient-to-br",
-                      trip.accent
-                    )}
+                    className="h-12 w-12 flex-shrink-0 rounded-lg bg-cover bg-center ring-1 ring-border"
+                    style={{
+                      backgroundImage: `url(${coverPhoto(
+                        trip.photoSeed ??
+                          DESTINATION_PHOTO_SEEDS[trip.city] ??
+                          trip.city.toLowerCase(),
+                        200,
+                        200
+                      )})`,
+                    }}
                   />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
@@ -84,7 +132,7 @@ export default function HomePage() {
                     </div>
                     <div className="text-[11px] text-text-muted">est.</div>
                   </div>
-                </div>
+                </Link>
               ))}
             </div>
 
@@ -156,12 +204,20 @@ export default function HomePage() {
                 >
                   <div
                     className={cn(
-                      "gradient-noise relative h-24 bg-gradient-to-br",
-                      d.accent
+                      "relative h-32 overflow-hidden bg-cover bg-center"
                     )}
+                    style={{
+                      backgroundImage: `linear-gradient(to top, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.05) 50%), url(${coverPhoto(
+                        d.photoSeed ??
+                          DESTINATION_PHOTO_SEEDS[d.city] ??
+                          d.city.toLowerCase(),
+                        600,
+                        360
+                      )})`,
+                    }}
                   >
                     <div className="absolute inset-0 flex items-end p-4">
-                      <span className="font-display text-[20px] leading-none text-white">
+                      <span className="font-display text-[22px] leading-none text-white">
                         {d.city}
                       </span>
                     </div>
