@@ -58,7 +58,7 @@ export default function DiscoverPage() {
         subtitle={`Based on your home base in ${USER.homeCity} · ${USER.daysLeft} days left`}
       />
 
-      <div className="px-10 py-8">
+      <div className="px-4 py-6 sm:px-10 sm:py-8">
         {/* Filters */}
         <div className="mb-7 space-y-4">
           <FilterRow label="Budget">
@@ -125,7 +125,7 @@ export default function DiscoverPage() {
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-3 gap-5">
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {filtered.map((d) => (
               <DestinationCard
                 key={d.id}
@@ -149,7 +149,7 @@ function FilterRow({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex items-center gap-3">
+    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
       <span className="w-[100px] text-[11px] uppercase tracking-[0.1em] text-text-muted">
         {label}
       </span>
