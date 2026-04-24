@@ -15,9 +15,13 @@ export function getAnthropic(): Anthropic {
 }
 
 export const MODELS = {
-  chat: "claude-opus-4-7",
+  chat: "claude-sonnet-4-6",
   utility: "claude-haiku-4-5",
 } as const;
+
+// Effort is supported on Opus 4.5+, Opus 4.6, Opus 4.7, and Sonnet 4.6.
+// Sending it to Haiku 4.5 returns a 400 — leave undefined for utility calls.
+export type Effort = "low" | "medium" | "high" | "max";
 
 export type BuildMessageParams = {
   model?: string;
@@ -26,12 +30,13 @@ export type BuildMessageParams = {
   tools?: Anthropic.Tool[];
   maxTokens?: number;
   cacheable?: boolean;
+  effort?: Effort;
 };
 
 // Builds a Messages API param object with Flock defaults.
 // System content comes first in the cache prefix; passing cacheable: true attaches
 // ephemeral cache_control so shared trip context reuses the cached prefix once it
-// crosses the model's minimum cacheable size (4096 tokens on Opus 4.7).
+// crosses the model's minimum cacheable size (2048 tokens on Sonnet 4.6).
 export function buildCreateParams(
   p: BuildMessageParams,
 ): Anthropic.MessageCreateParamsNonStreaming {
@@ -54,6 +59,7 @@ export function buildCreateParams(
     max_tokens: p.maxTokens ?? 16000,
     ...(system !== undefined ? { system } : {}),
     ...(tools !== undefined ? { tools } : {}),
+    ...(p.effort !== undefined ? { output_config: { effort: p.effort } } : {}),
     messages: p.messages,
   };
 }
