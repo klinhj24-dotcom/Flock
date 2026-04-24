@@ -11,8 +11,10 @@ import {
   Check,
   Crown,
   Clock,
+  Sparkles,
 } from "lucide-react";
 import { Header } from "@/components/header";
+import { ChatDrawer } from "@/components/chat/chat-drawer";
 import {
   TRIPS,
   FRIENDS,
@@ -29,6 +31,7 @@ export default function TripDetailPage() {
 
   const [tab, setTab] = useState<TabId>("overview");
   const [showMessagePopover, setShowMessagePopover] = useState(false);
+  const [chatOpen, setChatOpen] = useState(false);
 
   useEffect(() => {
     if (typeof window !== "undefined" && window.location.hash === "#expenses") {
@@ -88,19 +91,28 @@ export default function TripDetailPage() {
             <ArrowLeft className="h-4 w-4" />
             Back to trips
           </Link>
-          <div className="relative">
+          <div className="flex items-center gap-2">
             <button
-              onClick={handleMessageClick}
-              className="flex items-center gap-1.5 rounded-lg border border-border bg-surface-hover px-3 py-2 text-[12px] font-medium text-text-primary transition hover:border-primary/40"
+              onClick={() => setChatOpen(true)}
+              className="flex items-center gap-1.5 rounded-lg border border-primary/40 bg-primary/10 px-3 py-2 text-[12px] font-medium text-primary transition hover:bg-primary/15"
             >
-              <MessageCircle className="h-4 w-4" strokeWidth={1.75} />
-              Message Group
+              <Sparkles className="h-4 w-4" strokeWidth={1.75} />
+              Plan with Flock
             </button>
-            {showMessagePopover && (
-              <div className="absolute right-0 top-full z-30 mt-2 w-60 rounded-lg border border-border bg-surface px-3 py-2.5 text-[12px] text-text-muted shadow-lg">
-                Open on mobile to message your group directly
-              </div>
-            )}
+            <div className="relative">
+              <button
+                onClick={handleMessageClick}
+                className="flex items-center gap-1.5 rounded-lg border border-border bg-surface-hover px-3 py-2 text-[12px] font-medium text-text-primary transition hover:border-primary/40"
+              >
+                <MessageCircle className="h-4 w-4" strokeWidth={1.75} />
+                Message Group
+              </button>
+              {showMessagePopover && (
+                <div className="absolute right-0 top-full z-30 mt-2 w-60 rounded-lg border border-border bg-surface px-3 py-2.5 text-[12px] text-text-muted shadow-lg">
+                  Open on mobile to message your group directly
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
@@ -150,6 +162,12 @@ export default function TripDetailPage() {
         {tab === "expenses" && <ExpensesTab trip={trip} />}
         {tab === "bookings" && <BookingsTab trip={trip} />}
       </div>
+
+      <ChatDrawer
+        trip={trip}
+        open={chatOpen}
+        onClose={() => setChatOpen(false)}
+      />
     </>
   );
 }
