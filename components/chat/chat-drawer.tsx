@@ -1,9 +1,14 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { X, Send, Sparkles, Plane, Wrench } from "lucide-react";
 import type { Trip } from "@/lib/mock-data";
 import { cn } from "@/lib/utils";
+import {
+  ChipBar,
+  type ChipValues,
+  deriveDefaultChipValues,
+} from "@/components/chat/chip-bar";
 
 type Role = "user" | "assistant";
 
@@ -45,16 +50,23 @@ export function ChatDrawer({
   trip,
   open,
   onClose,
+  onTurnComplete,
 }: {
   trip: Trip;
   open: boolean;
   onClose: () => void;
+  onTurnComplete?: () => void;
 }) {
   const [messages, setMessages] = useState<UIMessage[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const endRef = useRef<HTMLDivElement | null>(null);
+
+  // Derive chip defaults from the trip at mount; the user can then override.
+  // Keyed by trip.id so opening a different trip re-derives.
+  const initialChips = useMemo(() => deriveDefaultChipValues(trip), [trip.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  const [chipValues, setChipValues] = useState<ChipValues>(initialChips);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -81,7 +93,11 @@ export function ChatDrawer({
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tripId: trip.id, messages: apiMessages }),
+        body: JSON.stringify({
+          tripId: trip.id,
+          messages: apiMessages,
+          chipValues,
+        }),
       });
       if (!res.ok) {
         const msg = await res.text();
@@ -95,6 +111,7 @@ export function ChatDrawer({
         ...next,
         { role: "assistant", content: data.content ?? [] },
       ]);
+      onTurnComplete?.();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -128,6 +145,8 @@ export function ChatDrawer({
             <X className="h-4 w-4" />
           </button>
         </div>
+
+        <ChipBar value={chipValues} onChange={setChipValues} />
 
         <div className="flex-1 space-y-4 overflow-y-auto px-5 py-5">
           {messages.length === 0 && (

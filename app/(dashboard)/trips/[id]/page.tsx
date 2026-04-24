@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import {
@@ -27,11 +27,32 @@ type TabId = "overview" | "expenses" | "bookings";
 
 export default function TripDetailPage() {
   const params = useParams<{ id: string }>();
-  const trip = TRIPS.find((t) => t.id === params.id);
+  // Start from the static mock so the first paint has real content; then sync
+  // with the server store (which holds any chat-driven additions) on mount and
+  // after every chat turn.
+  const [trip, setTrip] = useState<Trip | undefined>(() =>
+    TRIPS.find((t) => t.id === params.id),
+  );
 
   const [tab, setTab] = useState<TabId>("overview");
   const [showMessagePopover, setShowMessagePopover] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
+
+  const refreshTrip = useCallback(async () => {
+    if (!params.id) return;
+    try {
+      const res = await fetch(`/api/trips/${params.id}`);
+      if (!res.ok) return;
+      const data = (await res.json()) as { trip: Trip };
+      setTrip(data.trip);
+    } catch {
+      /* ignore — keep previous state */
+    }
+  }, [params.id]);
+
+  useEffect(() => {
+    refreshTrip();
+  }, [refreshTrip]);
 
   useEffect(() => {
     if (typeof window !== "undefined" && window.location.hash === "#expenses") {
@@ -167,6 +188,7 @@ export default function TripDetailPage() {
         trip={trip}
         open={chatOpen}
         onClose={() => setChatOpen(false)}
+        onTurnComplete={refreshTrip}
       />
     </>
   );

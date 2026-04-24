@@ -4,6 +4,7 @@ import { getAnthropic, MODELS } from "@/lib/anthropic";
 import {
   FLOCK_TOOL_DEFINITIONS,
   FLOCK_TOOL_HANDLERS,
+  type ToolContext,
 } from "@/lib/flock-tools";
 import { buildSystemPrompt, type ChipValues } from "@/lib/chat-prompt";
 import { TRIPS } from "@/lib/mock-data";
@@ -40,6 +41,7 @@ export async function POST(req: Request) {
 
   const trip = tripId ? TRIPS.find((t) => t.id === tripId) : undefined;
   const system = buildSystemPrompt({ trip, chipValues });
+  const toolCtx: ToolContext = { tripId };
 
   const client = getAnthropic();
 
@@ -104,7 +106,7 @@ export async function POST(req: Request) {
           };
         }
         try {
-          const out = await handler(tu.input);
+          const out = await handler(tu.input, toolCtx);
           return {
             type: "tool_result" as const,
             tool_use_id: tu.id,
