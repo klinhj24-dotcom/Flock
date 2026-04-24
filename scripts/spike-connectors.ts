@@ -92,6 +92,13 @@ async function runOne(client: Anthropic, c: Connector): Promise<RunResult> {
         name: c.name,
       },
     ],
+    // mcp-client-2025-11-20 requires an mcp_toolset entry per server to expose its tools
+    tools: [
+      {
+        type: "mcp_toolset",
+        mcp_server_name: c.name,
+      },
+    ],
     messages: [{ role: "user", content: c.prompt }],
     betas: [BETA_HEADER],
   };
@@ -129,10 +136,13 @@ async function runOne(client: Anthropic, c: Connector): Promise<RunResult> {
     }
     if (text) console.log(`    text: ${text}${text.length >= 220 ? "…" : ""}`);
 
+    // "ok" if at least one tool call came back clean; all-failed or zero-calls → reached_but_no_calls
     return {
       name: c.name,
       status:
-        mcpUses.length > 0 && toolErrors === 0 ? "ok" : "reached_but_no_calls",
+        mcpUses.length > 0 && toolErrors < mcpUses.length
+          ? "ok"
+          : "reached_but_no_calls",
     };
   } catch (e) {
     const err = e as {

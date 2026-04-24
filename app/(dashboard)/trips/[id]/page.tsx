@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import {
@@ -11,8 +11,10 @@ import {
   Check,
   Crown,
   Clock,
+  Sparkles,
 } from "lucide-react";
 import { Header } from "@/components/header";
+import { ChatDrawer } from "@/components/chat/chat-drawer";
 import {
   TRIPS,
   FRIENDS,
@@ -25,10 +27,32 @@ type TabId = "overview" | "expenses" | "bookings";
 
 export default function TripDetailPage() {
   const params = useParams<{ id: string }>();
-  const trip = TRIPS.find((t) => t.id === params.id);
+  // Start from the static mock so the first paint has real content; then sync
+  // with the server store (which holds any chat-driven additions) on mount and
+  // after every chat turn.
+  const [trip, setTrip] = useState<Trip | undefined>(() =>
+    TRIPS.find((t) => t.id === params.id),
+  );
 
   const [tab, setTab] = useState<TabId>("overview");
   const [showMessagePopover, setShowMessagePopover] = useState(false);
+  const [chatOpen, setChatOpen] = useState(false);
+
+  const refreshTrip = useCallback(async () => {
+    if (!params.id) return;
+    try {
+      const res = await fetch(`/api/trips/${params.id}`);
+      if (!res.ok) return;
+      const data = (await res.json()) as { trip: Trip };
+      setTrip(data.trip);
+    } catch {
+      /* ignore — keep previous state */
+    }
+  }, [params.id]);
+
+  useEffect(() => {
+    refreshTrip();
+  }, [refreshTrip]);
 
   useEffect(() => {
     if (typeof window !== "undefined" && window.location.hash === "#expenses") {
@@ -88,19 +112,28 @@ export default function TripDetailPage() {
             <ArrowLeft className="h-4 w-4" />
             Back to trips
           </Link>
-          <div className="relative">
+          <div className="flex items-center gap-2">
             <button
-              onClick={handleMessageClick}
-              className="flex items-center gap-1.5 rounded-lg border border-border bg-surface-hover px-3 py-2 text-[12px] font-medium text-text-primary transition hover:border-primary/40"
+              onClick={() => setChatOpen(true)}
+              className="flex items-center gap-1.5 rounded-lg border border-primary/40 bg-primary/10 px-3 py-2 text-[12px] font-medium text-primary transition hover:bg-primary/15"
             >
-              <MessageCircle className="h-4 w-4" strokeWidth={1.75} />
-              Message Group
+              <Sparkles className="h-4 w-4" strokeWidth={1.75} />
+              Plan with Flock
             </button>
-            {showMessagePopover && (
-              <div className="absolute right-0 top-full z-30 mt-2 w-60 rounded-lg border border-border bg-surface px-3 py-2.5 text-[12px] text-text-muted shadow-lg">
-                Open on mobile to message your group directly
-              </div>
-            )}
+            <div className="relative">
+              <button
+                onClick={handleMessageClick}
+                className="flex items-center gap-1.5 rounded-lg border border-border bg-surface-hover px-3 py-2 text-[12px] font-medium text-text-primary transition hover:border-primary/40"
+              >
+                <MessageCircle className="h-4 w-4" strokeWidth={1.75} />
+                Message Group
+              </button>
+              {showMessagePopover && (
+                <div className="absolute right-0 top-full z-30 mt-2 w-60 rounded-lg border border-border bg-surface px-3 py-2.5 text-[12px] text-text-muted shadow-lg">
+                  Open on mobile to message your group directly
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
@@ -150,6 +183,13 @@ export default function TripDetailPage() {
         {tab === "expenses" && <ExpensesTab trip={trip} />}
         {tab === "bookings" && <BookingsTab trip={trip} />}
       </div>
+
+      <ChatDrawer
+        trip={trip}
+        open={chatOpen}
+        onClose={() => setChatOpen(false)}
+        onTurnComplete={refreshTrip}
+      />
     </>
   );
 }
