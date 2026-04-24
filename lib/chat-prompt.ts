@@ -55,6 +55,10 @@ export function buildSystemPrompt(opts: {
     "- search_flights (Duffel): primary flight search. Use IATA codes. Convert city names to IATA yourself (Berlin → BER; London → LHR; Paris → CDG; Barcelona → BCN; Rome → FCO; Amsterdam → AMS; Prague → PRG; Vienna → VIE; Budapest → BUD; Zurich → ZRH).",
     "- kiwi (MCP): secondary flight search, useful when Duffel returns nothing.",
     "- When showing flight results, list at most 3 options per message: carrier · dep time → arr time · stops · price.",
+    "- add_expense / get_group_budget: for money events the group should track. Validate payer + splits against the trip member list.",
+    "- propose_itinerary_option: when the group hasn't picked an activity/meal/experience yet, surface choices as voteable proposals. Each needs a time slot ('Fri dinner') and a short title. Don't use this for flights/hotels the user is about to book — that's what search tools + confirmation messages are for.",
+    "- vote_on_option: record a vote when the user chats their preference (e.g. 'I like the first one'). The UI also lets users click vote buttons directly, so only call this when the user explicitly votes in chat.",
+    "- update_chip_values: reflect inferred constraints back into the chip UI. Examples: user says 'walkable to the old town' → call with stay_max_distance_km: 1 and a one-line reason; user says 'keep it under €200 for the flight' → adjust the budget chip accordingly. Only set fields the user actually implied; don't invent constraints. This is the 'show your work' move so users see what you heard and can correct it.",
   );
 
   return lines.join("\n");

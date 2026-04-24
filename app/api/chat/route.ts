@@ -57,6 +57,8 @@ export async function POST(req: Request) {
   const workingMessages: Anthropic.MessageParam[] = [...messages];
   let lastContent: Block[] = [];
   let stopReason: string | undefined;
+  // Merged update_chip_values inputs from any iteration; piped back to the UI.
+  const chipUpdates: Record<string, unknown> = {};
 
   for (let iter = 0; iter < MAX_TOOL_ITERATIONS; iter++) {
     const params: Record<string, unknown> = {
@@ -87,6 +89,18 @@ export async function POST(req: Request) {
       (b) => b.type === "tool_use",
     ) as Array<Block & { id: string; name: string; input: unknown }>;
 
+    // pause_turn: Anthropic's server-side MCP loop hit its iteration cap
+    // with work still pending. Append the assistant content unchanged and
+    // re-request — the server detects the trailing server_tool_use and
+    // resumes where it left off. No user message to add.
+    if (localToolUses.length === 0 && stopReason === "pause_turn") {
+      workingMessages.push({
+        role: "assistant",
+        content: lastContent as unknown as Anthropic.MessageParam["content"],
+      });
+      continue;
+    }
+
     if (localToolUses.length === 0) break;
 
     workingMessages.push({
@@ -107,6 +121,12 @@ export async function POST(req: Request) {
         }
         try {
           const out = await handler(tu.input, toolCtx);
+          // update_chip_values is a pure signal tool — merge its validated
+          // input into the response envelope so the drawer can reflect it.
+          if (tu.name === "update_chip_values" && out && typeof out === "object") {
+            const applied = (out as { applied?: Record<string, unknown> }).applied;
+            if (applied) Object.assign(chipUpdates, applied);
+          }
           return {
             type: "tool_result" as const,
             tool_use_id: tu.id,
@@ -134,5 +154,6 @@ export async function POST(req: Request) {
     content: lastContent,
     messages: workingMessages,
     stopReason,
+    chipUpdates: Object.keys(chipUpdates).length > 0 ? chipUpdates : undefined,
   });
 }

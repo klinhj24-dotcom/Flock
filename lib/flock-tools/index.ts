@@ -3,12 +3,18 @@ import type { FlockTool, ToolContext, ToolHandler } from "@/lib/flock-tools/type
 import { searchFlightsTool } from "@/lib/flock-tools/search-flights";
 import { addExpenseTool } from "@/lib/flock-tools/add-expense";
 import { getGroupBudgetTool } from "@/lib/flock-tools/get-group-budget";
+import { proposeItineraryOptionTool } from "@/lib/flock-tools/propose-itinerary-option";
+import { voteOnOptionTool } from "@/lib/flock-tools/vote-on-option";
+import { updateChipValuesTool } from "@/lib/flock-tools/update-chip-values";
 
 // Registry. Add a new tool here and the /api/chat loop picks it up.
 const TOOLS: FlockTool[] = [
   searchFlightsTool,
   addExpenseTool,
   getGroupBudgetTool,
+  proposeItineraryOptionTool,
+  voteOnOptionTool,
+  updateChipValuesTool,
 ];
 
 export const FLOCK_TOOL_DEFINITIONS: Anthropic.Tool[] = TOOLS.map(

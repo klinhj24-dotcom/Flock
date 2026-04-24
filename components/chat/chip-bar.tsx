@@ -1,7 +1,15 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Wallet, Calendar, Users, Plane } from "lucide-react";
+import {
+  Wallet,
+  Calendar,
+  Users,
+  Plane,
+  MapPin,
+  Hotel,
+  Sparkles,
+} from "lucide-react";
 import type { Trip } from "@/lib/mock-data";
 import { cn } from "@/lib/utils";
 
@@ -16,6 +24,14 @@ export type ChipValues = {
   vibe?: string[];
   transportMode?: Array<"fly" | "train" | "bus">;
 };
+
+export const VIBE_OPTIONS = [
+  "party",
+  "chill",
+  "culture",
+  "outdoors",
+] as const;
+export type Vibe = (typeof VIBE_OPTIONS)[number];
 
 export function deriveDefaultChipValues(trip: Trip): ChipValues {
   return {
@@ -189,6 +205,119 @@ export function ChipBar({
           </div>
         )}
       </Chip>
+
+      <Chip
+        icon={<MapPin className="h-3 w-3" />}
+        label="From"
+        summary={value.homeAirport || "—"}
+      >
+        {(close) => (
+          <div className="space-y-2">
+            <label className="flex items-center gap-2">
+              <span className="w-20 text-[11px] text-text-muted">IATA</span>
+              <input
+                type="text"
+                maxLength={3}
+                placeholder="LHR"
+                value={value.homeAirport ?? ""}
+                onChange={(e) =>
+                  set(
+                    "homeAirport",
+                    e.target.value.toUpperCase() || undefined,
+                  )
+                }
+                className="w-20 rounded border border-border bg-background px-2 py-1 text-[12px] uppercase tracking-wider text-text-primary"
+              />
+            </label>
+            <div className="text-[10px] text-text-muted">
+              Home airport for flight searches (e.g. LHR, JFK, CDG).
+            </div>
+            <SaveRow onClose={close} />
+          </div>
+        )}
+      </Chip>
+
+      <Chip
+        icon={<Hotel className="h-3 w-3" />}
+        label="Stay"
+        summary={formatStaySummary(value)}
+      >
+        {(close) => (
+          <div className="space-y-2">
+            <label className="block">
+              <span className="text-[10px] uppercase tracking-wide text-text-muted">
+                Max €/night
+              </span>
+              <input
+                type="number"
+                min={0}
+                placeholder="80"
+                value={value.stayMaxPerNight ?? ""}
+                onChange={(e) =>
+                  set(
+                    "stayMaxPerNight",
+                    e.target.value ? Number(e.target.value) : undefined,
+                  )
+                }
+                className="mt-0.5 w-full rounded border border-border bg-background px-2 py-1 text-[12px] text-text-primary"
+              />
+            </label>
+            <label className="block">
+              <span className="text-[10px] uppercase tracking-wide text-text-muted">
+                Max km from center
+              </span>
+              <input
+                type="number"
+                min={0}
+                step="0.5"
+                placeholder="2"
+                value={value.stayMaxDistanceKm ?? ""}
+                onChange={(e) =>
+                  set(
+                    "stayMaxDistanceKm",
+                    e.target.value ? Number(e.target.value) : undefined,
+                  )
+                }
+                className="mt-0.5 w-full rounded border border-border bg-background px-2 py-1 text-[12px] text-text-primary"
+              />
+            </label>
+            <SaveRow onClose={close} />
+          </div>
+        )}
+      </Chip>
+
+      <Chip
+        icon={<Sparkles className="h-3 w-3" />}
+        label="Vibe"
+        summary={value.vibe?.length ? value.vibe.join(", ") : "any"}
+      >
+        {(close) => (
+          <div className="space-y-2">
+            <div className="text-[10px] uppercase tracking-wide text-text-muted">
+              Pick one or more
+            </div>
+            {VIBE_OPTIONS.map((v) => (
+              <label
+                key={v}
+                className="flex items-center gap-2 text-[12px] text-text-primary"
+              >
+                <input
+                  type="checkbox"
+                  checked={value.vibe?.includes(v) ?? false}
+                  onChange={(e) => {
+                    const cur = new Set(value.vibe ?? []);
+                    if (e.target.checked) cur.add(v);
+                    else cur.delete(v);
+                    set("vibe", Array.from(cur));
+                  }}
+                />
+                {v}
+              </label>
+            ))}
+            <SaveRow onClose={close} />
+          </div>
+        )}
+      </Chip>
     </div>
   );
 }
@@ -286,4 +415,11 @@ function formatDateSummary(dates?: ChipValues["dates"]): string {
   const flex =
     dates.flexDays && dates.flexDays > 0 ? ` ±${dates.flexDays}d` : "";
   return `${start}→${end}${flex}`;
+}
+
+function formatStaySummary(v: ChipValues): string {
+  const parts: string[] = [];
+  if (v.stayMaxPerNight) parts.push(`≤${v.currency ?? "EUR"} ${v.stayMaxPerNight}/n`);
+  if (v.stayMaxDistanceKm) parts.push(`≤${v.stayMaxDistanceKm}km`);
+  return parts.length ? parts.join(" · ") : "—";
 }

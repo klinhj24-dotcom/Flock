@@ -1,7 +1,15 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { X, Send, Sparkles, Plane, Wrench } from "lucide-react";
+import {
+  X,
+  Send,
+  Sparkles,
+  Plane,
+  Wrench,
+  ThumbsUp,
+  ThumbsDown,
+} from "lucide-react";
 import type { Trip } from "@/lib/mock-data";
 import { cn } from "@/lib/utils";
 import {
@@ -11,6 +19,45 @@ import {
 } from "@/components/chat/chip-bar";
 
 type Role = "user" | "assistant";
+
+// Wire-level shape for update_chip_values results piped back from /api/chat.
+// Field names are snake_case (the tool's input_schema); we translate to
+// ChipValues (camelCase) via applyChipUpdates below.
+type ChipValuesUpdate = {
+  budget_per_person?: number;
+  currency?: "EUR" | "USD" | "GBP";
+  dates_start?: string;
+  dates_end?: string;
+  dates_flex_days?: number;
+  group_size?: number;
+  home_airport?: string;
+  stay_max_per_night?: number;
+  stay_max_distance_km?: number;
+  vibe?: string[];
+  transport_mode?: Array<"fly" | "train" | "bus">;
+  reason?: string;
+};
+
+function applyChipUpdates(prev: ChipValues, u: ChipValuesUpdate): ChipValues {
+  const next: ChipValues = { ...prev };
+  if (u.budget_per_person !== undefined) next.budgetPerPerson = u.budget_per_person;
+  if (u.currency !== undefined) next.currency = u.currency;
+  if (u.dates_start !== undefined || u.dates_end !== undefined || u.dates_flex_days !== undefined) {
+    next.dates = {
+      ...prev.dates,
+      ...(u.dates_start !== undefined ? { start: u.dates_start } : {}),
+      ...(u.dates_end !== undefined ? { end: u.dates_end } : {}),
+      ...(u.dates_flex_days !== undefined ? { flexDays: u.dates_flex_days } : {}),
+    };
+  }
+  if (u.group_size !== undefined) next.groupSize = u.group_size;
+  if (u.home_airport !== undefined) next.homeAirport = u.home_airport;
+  if (u.stay_max_per_night !== undefined) next.stayMaxPerNight = u.stay_max_per_night;
+  if (u.stay_max_distance_km !== undefined) next.stayMaxDistanceKm = u.stay_max_distance_km;
+  if (u.vibe !== undefined) next.vibe = u.vibe;
+  if (u.transport_mode !== undefined) next.transportMode = u.transport_mode;
+  return next;
+}
 
 type ContentBlock =
   | { type: "text"; text: string }
@@ -72,6 +119,11 @@ export function ChatDrawer({
     endRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loading]);
 
+  const drawerCtx: DrawerContext = {
+    tripId: trip.id,
+    currentVoter: trip.tripCaptain || trip.captain || trip.people[0] || "You",
+  };
+
   if (!open) return null;
 
   const send = async () => {
@@ -106,11 +158,15 @@ export function ChatDrawer({
       const data = (await res.json()) as {
         content: ContentBlock[];
         stopReason?: string;
+        chipUpdates?: ChipValuesUpdate;
       };
       setMessages([
         ...next,
         { role: "assistant", content: data.content ?? [] },
       ]);
+      if (data.chipUpdates) {
+        setChipValues((prev) => applyChipUpdates(prev, data.chipUpdates!));
+      }
       onTurnComplete?.();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -159,7 +215,7 @@ export function ChatDrawer({
             </div>
           )}
           {messages.map((m, i) => (
-            <MessageRow key={i} message={m} />
+            <MessageRow key={i} message={m} ctx={drawerCtx} />
           ))}
           {loading && (
             <div className="flex items-center gap-2 text-[12px] text-text-muted">
@@ -207,7 +263,18 @@ export function ChatDrawer({
   );
 }
 
-function MessageRow({ message }: { message: UIMessage }) {
+type DrawerContext = {
+  tripId: string;
+  currentVoter: string;
+};
+
+function MessageRow({
+  message,
+  ctx,
+}: {
+  message: UIMessage;
+  ctx: DrawerContext;
+}) {
   const isUser = message.role === "user";
   const blocks: ContentBlock[] =
     typeof message.content === "string"
@@ -223,7 +290,7 @@ function MessageRow({ message }: { message: UIMessage }) {
         )}
       >
         {blocks.map((b, i) => (
-          <BlockRow key={i} block={b} isUser={isUser} />
+          <BlockRow key={i} block={b} isUser={isUser} ctx={ctx} />
         ))}
       </div>
     </div>
@@ -233,9 +300,11 @@ function MessageRow({ message }: { message: UIMessage }) {
 function BlockRow({
   block,
   isUser,
+  ctx,
 }: {
   block: ContentBlock;
   isUser: boolean;
+  ctx: DrawerContext;
 }) {
   if (block.type === "text") {
     return (
@@ -269,18 +338,20 @@ function BlockRow({
     );
   }
   if (block.type === "tool_result" || block.type === "mcp_tool_result") {
-    return <ToolResultBlock block={block} />;
+    return <ToolResultBlock block={block} ctx={ctx} />;
   }
   return null;
 }
 
 function ToolResultBlock({
   block,
+  ctx,
 }: {
   block: Extract<
     ContentBlock,
     { type: "tool_result" } | { type: "mcp_tool_result" }
   >;
+  ctx: DrawerContext;
 }) {
   const raw = flattenToolContent(block.content);
 
@@ -299,6 +370,9 @@ function ToolResultBlock({
     /* not json, fall through */
   }
 
+  const proposal = extractProposal(parsed);
+  if (proposal) return <VotingCard proposal={proposal} ctx={ctx} />;
+
   const offers = extractFlightOffers(parsed);
   if (offers && offers.length > 0) return <FlightOffersList offers={offers} />;
 
@@ -309,6 +383,132 @@ function ToolResultBlock({
         {raw.slice(0, 2000)}
       </pre>
     </details>
+  );
+}
+
+type Proposal = {
+  id: string;
+  slot: string;
+  title: string;
+  description?: string;
+  votes: Record<string, "up" | "down">;
+};
+
+function extractProposal(parsed: unknown): Proposal | null {
+  if (!parsed || typeof parsed !== "object") return null;
+  const obj = parsed as Record<string, unknown>;
+  const opt = obj.option as Record<string, unknown> | undefined;
+  if (
+    !opt ||
+    typeof opt.id !== "string" ||
+    typeof opt.slot !== "string" ||
+    typeof opt.title !== "string"
+  ) {
+    return null;
+  }
+  return {
+    id: opt.id,
+    slot: opt.slot,
+    title: opt.title,
+    description:
+      typeof opt.description === "string" ? opt.description : undefined,
+    votes:
+      typeof opt.votes === "object" && opt.votes !== null
+        ? (opt.votes as Record<string, "up" | "down">)
+        : {},
+  };
+}
+
+function VotingCard({
+  proposal,
+  ctx,
+}: {
+  proposal: Proposal;
+  ctx: DrawerContext;
+}) {
+  const [votes, setVotes] = useState<Record<string, "up" | "down">>(
+    proposal.votes,
+  );
+  const [busy, setBusy] = useState(false);
+  const myVote = votes[ctx.currentVoter];
+  const upCount = Object.values(votes).filter((v) => v === "up").length;
+  const downCount = Object.values(votes).filter((v) => v === "down").length;
+
+  const cast = async (vote: "up" | "down") => {
+    if (busy) return;
+    setBusy(true);
+    // Optimistic update
+    setVotes((prev) => ({ ...prev, [ctx.currentVoter]: vote }));
+    try {
+      const res = await fetch(`/api/trips/${ctx.tripId}/votes`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          option_id: proposal.id,
+          voter: ctx.currentVoter,
+          vote,
+        }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      const data = (await res.json()) as { option: { votes: Record<string, "up" | "down"> } };
+      setVotes(data.option.votes);
+    } catch {
+      // revert
+      setVotes(proposal.votes);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="rounded-lg border border-border bg-background p-3">
+      <div className="mb-1 flex items-center gap-2">
+        <span className="rounded bg-primary/10 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-primary">
+          {proposal.slot}
+        </span>
+        <span className="text-[13px] font-medium text-text-primary">
+          {proposal.title}
+        </span>
+      </div>
+      {proposal.description && (
+        <div className="mb-2 text-[12px] text-text-muted">
+          {proposal.description}
+        </div>
+      )}
+      <div className="flex items-center gap-2">
+        <button
+          onClick={() => cast("up")}
+          disabled={busy}
+          className={cn(
+            "flex items-center gap-1 rounded border px-2 py-1 text-[11px] transition",
+            myVote === "up"
+              ? "border-green-500/60 bg-green-500/10 text-green-500"
+              : "border-border text-text-muted hover:border-green-500/40",
+          )}
+        >
+          <ThumbsUp className="h-3 w-3" />
+          {upCount}
+        </button>
+        <button
+          onClick={() => cast("down")}
+          disabled={busy}
+          className={cn(
+            "flex items-center gap-1 rounded border px-2 py-1 text-[11px] transition",
+            myVote === "down"
+              ? "border-red-500/60 bg-red-500/10 text-red-500"
+              : "border-border text-text-muted hover:border-red-500/40",
+          )}
+        >
+          <ThumbsDown className="h-3 w-3" />
+          {downCount}
+        </button>
+        {myVote && (
+          <span className="text-[10px] text-text-muted">
+            you voted {myVote === "up" ? "👍" : "👎"}
+          </span>
+        )}
+      </div>
+    </div>
   );
 }
 
